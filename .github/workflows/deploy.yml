@@ -1,0 +1,158 @@
+name: Deploy SmartMoney AI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: rg-smartmoneyai
+  AZURE_LOCATION: eastus
+
+jobs:
+  # ── 1. Test FastAPI backend ─────────────────────────────────────────────────
+  test-api:
+    name: Test FastAPI backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-asyncio httpx
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          COSMOS_ENDPOINT: "https://test.documents.azure.com:443/"
+          COSMOS_KEY: "test-key=="
+          AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=dGVzdA==;EndpointSuffix=core.windows.net"
+          AZURE_STORAGE_ACCOUNT_NAME: "test"
+          AZURE_STORAGE_ACCOUNT_KEY: "dGVzdA=="
+          AZURE_OPENAI_ENDPOINT: "https://test.openai.azure.com/"
+          AZURE_OPENAI_API_KEY: "test-key"
+          AZURE_OPENAI_DEPLOYMENT_NAME: "gpt-4o-mini"
+
+  # ── 2. Provision Azure infrastructure (main branch only) ───────────────────
+  deploy-infra:
+    name: Deploy Azure Infrastructure
+    needs: test-api
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    outputs:
+      api_url: ${{ steps.deploy.outputs.apiUrl }}
+      swa_url: ${{ steps.deploy.outputs.staticWebAppUrl }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep infrastructure
+        id: deploy
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: infra/main.bicep
+          parameters: >
+            infra/main.parameters.json
+            openAiApiKey=${{ secrets.AZURE_OPENAI_API_KEY }}
+            openAiEndpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          failOnStdErr: false
+
+  # ── 3. Build & push API Docker image ───────────────────────────────────────
+  build-push-api:
+    name: Build & Push API image
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and push to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/smartmoneyai-api:${{ github.sha }} ./api
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/smartmoneyai-api:${{ github.sha }}
+
+      - name: Update Container App image
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name smartmoneyai-api-dev \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ secrets.ACR_LOGIN_SERVER }}/smartmoneyai-api:${{ github.sha }}
+
+  # ── 4. Deploy Frontend to Azure Static Web App ─────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Deploy to Azure Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: frontend
+          output_location: src
+          skip_api_build: true
+
+  # ── 5. Close PR staging environment ────────────────────────────────────────
+  close-staging:
+    name: Close Staging Environment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Close PR staging environment
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: close
+          app_location: frontend

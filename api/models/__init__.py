@@ -1,0 +1,3 @@
+"""
+SmartMoney AI – models package.
+"""

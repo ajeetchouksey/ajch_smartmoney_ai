@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartMoney AI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <span class="logo">💰 SmartMoney AI</span>
+      <nav>
+        <a href="#chat">Chat</a>
+        <a href="#upload">Upload</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ── Chat Section ── -->
+    <section id="chat" class="card">
+      <h2>AI Financial Assistant</h2>
+      <p class="subtitle">Ask anything about budgeting, investments, or savings.</p>
+
+      <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+
+      <form id="chat-form" class="chat-form" autocomplete="off">
+        <input
+          id="chat-input"
+          type="text"
+          placeholder="e.g. How should I allocate my monthly budget?"
+          required
+          aria-label="Your message"
+        />
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+    </section>
+
+    <!-- ── File Upload Section ── -->
+    <section id="upload" class="card">
+      <h2>Upload Financial Document</h2>
+      <p class="subtitle">Upload bank statements, receipts, or reports (max 10 MB).</p>
+
+      <form id="upload-form">
+        <label class="file-label">
+          <input type="file" id="file-input" accept=".pdf,.csv,.xlsx,.png,.jpg" />
+          <span id="file-name-display">Choose a file…</span>
+        </label>
+        <button type="submit" id="upload-btn">Upload</button>
+      </form>
+
+      <div id="upload-result" class="upload-result" hidden></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>SmartMoney AI &copy; 2025 &mdash; Powered by Azure OpenAI, Cosmos DB &amp; Azure Storage</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
