@@ -1,0 +1,23 @@
+{
+  "navigationFallback": {
+    "rewrite": "/src/index.html",
+    "exclude": ["/src/*.{css,js,png,jpg,ico,svg}"]
+  },
+  "routes": [
+    {
+      "route": "/api/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ],
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.openai.azure.com https://*.documents.azure.com https://*.blob.core.windows.net"
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/src/index.html",
+      "statusCode": 200
+    }
+  }
+}
