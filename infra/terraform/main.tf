@@ -19,6 +19,7 @@ terraform {
     storage_account_name = "stsmartmoneytfstate"
     container_name       = "tfstate"
     key                  = "smartmoney/state.tfstate"
+    use_azuread_auth     = true
   }
 }
 
