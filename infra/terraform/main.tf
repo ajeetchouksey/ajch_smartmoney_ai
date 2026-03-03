@@ -16,7 +16,7 @@ terraform {
   # terraform init -backend-config="key=smartmoney/dev.tfstate" (or staging/prod)
   backend "azurerm" {
     resource_group_name  = "rg-tfstate"
-    storage_account_name = "stsmartmoneyf3fa74a8"
+    storage_account_name = "stsmartmoneytfstate"
     container_name       = "tfstate"
     key                  = "smartmoney/state.tfstate"
   }
