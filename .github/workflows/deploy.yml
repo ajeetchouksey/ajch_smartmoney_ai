@@ -1,0 +1,95 @@
+name: Deploy SmartMoney AI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/terraform/**'
+      - '.github/workflows/deploy.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'infra/terraform/**'
+
+env:
+  TF_VERSION: 1.7.0
+  ENVIRONMENT: dev
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform:
+    name: Plan & Deploy Infrastructure
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure login (via OIDC federated credential)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          auth-type: SERVICE_PRINCIPAL
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/${{ env.ENVIRONMENT }}.tfvars -out=${{ env.ENVIRONMENT }}.tfplan
+
+      - name: Comment Plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `#### Terraform Plan for ${{ env.ENVIRONMENT }} 📊
+            \`\`\`
+            $(cat ${{ github.workspace }}/infra/terraform/${{ env.ENVIRONMENT }}.tfplan)
+            \`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve ${{ env.ENVIRONMENT }}.tfplan
+
+      - name: Export Terraform Outputs
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "### Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Infrastructure Outputs:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          terraform output -json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ${{ env.ENVIRONMENT }}.tfplan
