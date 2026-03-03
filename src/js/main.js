@@ -1,10 +1,13 @@
 import { renderNavbar, renderKpiCard, renderChartSkeleton, renderChatInterface,
+         renderCopilotMessage, renderCopilotActionCard,
          renderProfileWizardShell, renderWizardStep1, renderWizardStep2, renderWizardStep3,
          renderWizardStep4, renderWizardStep5, renderProfilePage, renderAddMemberModal,
          renderExpensesPage, renderExpenseEntryModal, renderIncomeEntryModal
        } from './uiux_kit/components.js';
 import { dataService, getProfileMerged, isLiveMode } from './data/dataService.js';
 import { getForecast, isAIEnabled } from './ai/aiService.js';
+import { inferProfileType, suggestCurrencyForCountry, generateWelcomeInsight } from './ai/aiOnboarding.js';
+import { quickParseEntry, parseNaturalLanguageCommand } from './ai/aiCopilot.js';
 
 // Application State
 const state = {
@@ -26,10 +29,17 @@ const state = {
         primary_currency: null,
         additional_currencies: [],
         member: {},
-        local_data_path: ''
+        local_data_path: '',
+        // AI-generated values (promises resolved between steps)
+        _aiCurrencySuggestion: null,  // Promise<{code,reason}|null>
+        _aiWelcome: null              // Promise<string|null>
     },
     countriesRef: null,
-    currenciesRef: null
+    currenciesRef: null,
+    copilot: {
+        messages: [],        // { role: 'user'|'copilot'|'system', text: string }
+        pendingAction: null  // { intent, data, reply, monthData, records }
+    }
 };
 
 // Initialize App
@@ -119,6 +129,7 @@ function renderPage(pageId) {
     }
     else if (pageId === 'assistant') {
         contentArea.innerHTML = renderChatInterface();
+        initCopilot(contentArea);
     }
     else if (pageId === 'expenses') {
         renderExpensesPageView();
@@ -453,19 +464,59 @@ function showExpenseModal(type, monthData, records, currency, availableCurrencie
     const close = () => document.getElementById('exp-modal')?.remove();
     document.getElementById('close-exp-modal')?.addEventListener('click', close);
     document.getElementById('cancel-exp')?.addEventListener('click', close);
+
+    // ── Smart Fill handler ────────────────────────────────────────────────────
+    document.getElementById('exp-smart-btn')?.addEventListener('click', async () => {
+        const text = document.getElementById('exp-smart-input')?.value.trim();
+        const statusEl = document.getElementById('exp-smart-status');
+        if (!text) return;
+        const btn = document.getElementById('exp-smart-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-[10px]"></i><span>Filling…</span>';
+        const curCodes = availableCurrencies.map(c => c.code);
+        const parsed = await quickParseEntry(text, type, curCodes, displayCur);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles text-[10px]"></i><span>Fill</span>';
+        if (parsed) {
+            if (parsed.name)     document.getElementById('exp-name').value = parsed.name;
+            if (parsed.category) document.getElementById('exp-category').value = parsed.category;
+            if (parsed.currency) document.getElementById('exp-currency').value = parsed.currency;
+            if (parsed.frequency) document.getElementById('exp-frequency').value = parsed.frequency;
+            if (type === 'fixed') {
+                if (parsed.amount != null) document.getElementById('exp-amount').value = parsed.amount;
+                if (parsed.due_day)        document.getElementById('exp-due').value = parsed.due_day;
+            } else {
+                if (parsed.budget != null) document.getElementById('exp-budget').value = parsed.budget;
+                if (parsed.actual != null) document.getElementById('exp-actual').value = parsed.actual;
+            }
+            if (statusEl) {
+                statusEl.textContent = '✓ Fields filled — review and adjust if needed.';
+                statusEl.classList.remove('hidden', 'text-rose-600');
+                statusEl.classList.add('text-blue-600');
+            }
+        } else {
+            if (statusEl) {
+                statusEl.textContent = 'Could not parse — please fill manually.';
+                statusEl.classList.remove('hidden', 'text-blue-600');
+                statusEl.classList.add('text-rose-600');
+            }
+        }
+    });
+
     document.getElementById('save-exp')?.addEventListener('click', async () => {
         const name = document.getElementById('exp-name')?.value.trim();
         if (!name) { alert('Please enter a name.'); return; }
-        const cat = document.getElementById('exp-category')?.value;
-        const cur = document.getElementById('exp-currency')?.value || displayCur;
+        const cat  = document.getElementById('exp-category')?.value;
+        const cur  = document.getElementById('exp-currency')?.value || displayCur;
+        const freq = document.getElementById('exp-frequency')?.value || 'monthly';
         if (type === 'fixed') {
             const amount = parseFloat(document.getElementById('exp-amount')?.value) || 0;
             const due    = parseInt(document.getElementById('exp-due')?.value)    || null;
-            monthData.fixed_expenses.push({ id: `fx_${Date.now()}`, name, amount, currency: cur, category: cat, due_day: due });
+            monthData.fixed_expenses.push({ id: `fx_${Date.now()}`, name, amount, currency: cur, category: cat, due_day: due, frequency: freq });
         } else {
             const budget = parseFloat(document.getElementById('exp-budget')?.value) || 0;
             const actual = parseFloat(document.getElementById('exp-actual')?.value) || 0;
-            monthData.variable_expenses.push({ id: `vx_${Date.now()}`, name, budget, actual, currency: cur, category: cat });
+            monthData.variable_expenses.push({ id: `vx_${Date.now()}`, name, budget, actual, currency: cur, category: cat, frequency: freq });
         }
         monthData.ai_forecast = null;
         await dataService.saveExpenses(records);
@@ -481,15 +532,50 @@ function showIncomeModal(monthData, records, availableCurrencies, homeCountry, r
     const close = () => document.getElementById('income-modal')?.remove();
     document.getElementById('close-income-modal')?.addEventListener('click', close);
     document.getElementById('cancel-income')?.addEventListener('click', close);
+
+    // ── Smart Fill handler ────────────────────────────────────────────────────
+    document.getElementById('inc-smart-btn')?.addEventListener('click', async () => {
+        const text = document.getElementById('inc-smart-input')?.value.trim();
+        const statusEl = document.getElementById('inc-smart-status');
+        if (!text) return;
+        const btn = document.getElementById('inc-smart-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-[10px]"></i><span>Filling…</span>';
+        const curCodes = availableCurrencies.map(c => c.code);
+        const parsed = await quickParseEntry(text, 'income', curCodes, displayCur);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles text-[10px]"></i><span>Fill</span>';
+        if (parsed) {
+            if (parsed.name)         document.getElementById('inc-name').value = parsed.name;
+            if (parsed.category)     document.getElementById('inc-category').value = parsed.category;
+            if (parsed.currency)     document.getElementById('inc-currency').value = parsed.currency;
+            if (parsed.amount != null) document.getElementById('inc-amount').value = parsed.amount;
+            if (parsed.frequency)    document.getElementById('inc-frequency').value = parsed.frequency;
+            if (parsed.country_type) document.getElementById('inc-country-type').value = parsed.country_type;
+            if (statusEl) {
+                statusEl.textContent = '✓ Fields filled — review and adjust if needed.';
+                statusEl.classList.remove('hidden', 'text-rose-600');
+                statusEl.classList.add('text-emerald-600');
+            }
+        } else {
+            if (statusEl) {
+                statusEl.textContent = 'Could not parse — please fill manually.';
+                statusEl.classList.remove('hidden', 'text-emerald-600');
+                statusEl.classList.add('text-rose-600');
+            }
+        }
+    });
+
     document.getElementById('save-income')?.addEventListener('click', async () => {
         const name = document.getElementById('inc-name')?.value.trim();
         if (!name) { alert('Please enter a name.'); return; }
-        const cat         = document.getElementById('inc-category')?.value;
-        const cur         = document.getElementById('inc-currency')?.value || displayCur;
-        const amount      = parseFloat(document.getElementById('inc-amount')?.value) || 0;
+        const cat          = document.getElementById('inc-category')?.value;
+        const cur          = document.getElementById('inc-currency')?.value || displayCur;
+        const amount       = parseFloat(document.getElementById('inc-amount')?.value) || 0;
         const country_type = document.getElementById('inc-country-type')?.value || 'home';
+        const freq         = document.getElementById('inc-frequency')?.value || 'monthly';
         if (!monthData.income_sources) monthData.income_sources = [];
-        monthData.income_sources.push({ id: `inc_${Date.now()}`, name, amount, currency: cur, category: cat, country_type });
+        monthData.income_sources.push({ id: `inc_${Date.now()}`, name, amount, currency: cur, category: cat, country_type, frequency: freq });
         monthData.ai_forecast = null;
         await dataService.saveExpenses(records);
         _expensesCache = records;
@@ -498,9 +584,171 @@ function showIncomeModal(monthData, records, availableCurrencies, homeCountry, r
     });
 }
 
+// ---------------------------------------------------------------------------
+// SmartMoney Copilot controller
+// ---------------------------------------------------------------------------
+function _copilotScrollToBottom() {
+    const msgs = document.getElementById('copilot-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function _copilotAppend(html) {
+    const msgs = document.getElementById('copilot-messages');
+    if (!msgs) return;
+    msgs.insertAdjacentHTML('beforeend', html);
+    _copilotScrollToBottom();
+}
+
+function _copilotRemoveLoading() {
+    document.getElementById('copilot-loading')?.remove();
+}
+
+function _copilotShowLoading() {
+    _copilotAppend(`
+        <div id="copilot-loading" class="flex items-start space-x-2 mt-4">
+            <div class="h-7 w-7 rounded-lg bg-blue-600/20 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-wand-magic-sparkles text-blue-400 text-[10px]"></i>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-xl rounded-tl-none px-4 py-3 shadow-sm">
+                <span class="inline-flex space-x-1">
+                    <span class="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style="animation-delay:0ms"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style="animation-delay:150ms"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce" style="animation-delay:300ms"></span>
+                </span>
+            </div>
+        </div>`);
+}
+
+function initCopilot() {
+    // Reset in-memory state when page (re)loads
+    state.copilot.messages = [];
+    state.copilot.pendingAction = null;
+
+    const form  = document.getElementById('copilot-form');
+    const input = document.getElementById('copilot-input');
+    const send  = document.getElementById('copilot-send');
+
+    async function handleSend(text) {
+        if (!text.trim()) return;
+        input.value = '';
+        send.disabled = true;
+
+        // Append user bubble
+        _copilotAppend(renderCopilotMessage('user', text));
+        state.copilot.messages.push({ role: 'user', text });
+        _copilotShowLoading();
+
+        try {
+            // Load context lazily
+            const [records, profile] = await Promise.all([
+                getOrLoadExpenses(),
+                getProfileMerged()
+            ]);
+            const month = getCurrentMonth();
+            const pri   = profile.primary_currency || 'USD';
+            const monthData = getOrCreateMonthRecord(records, month, pri);
+
+            const allCountries = (state.countriesRef || {}).countries || [];
+            const homeCountry      = allCountries.find(c => c.code === profile.home_country) || null;
+            const residenceCountry = allCountries.find(c => c.code === profile.residence_country) || null;
+            const allCurrencies    = (state.countriesRef || {}).currencies || [];
+            const codes = new Set([pri, ...(profile.additional_currencies || [])]);
+            [homeCountry, residenceCountry].filter(Boolean)
+                .forEach(c => (c.currencies || []).forEach(x => codes.add(x)));
+            const availableCurrencies = allCurrencies.filter(c => codes.has(c.code));
+            if (!availableCurrencies.find(c => c.code === pri)) {
+                availableCurrencies.unshift({ code: pri, name: pri, symbol: pri });
+            }
+
+            const result = await parseNaturalLanguageCommand(text, {
+                profile,
+                availableCurrencies,
+                currentMonth: monthData,
+                homeCountryName:      homeCountry?.name      || profile.home_country,
+                residenceCountryName: residenceCountry?.name || null
+            });
+
+            _copilotRemoveLoading();
+
+            if (result.intent && result.intent !== 'query' && result.intent !== 'unknown' && result.data) {
+                // Action intent — show reply + confirmation card
+                _copilotAppend(renderCopilotMessage('copilot', result.reply));
+                _copilotAppend(renderCopilotActionCard(result));
+                state.copilot.pendingAction = { ...result, monthData, records };
+
+                // Bind confirm / cancel
+                document.getElementById('copilot-confirm')?.addEventListener('click', async () => {
+                    const pa = state.copilot.pendingAction;
+                    if (!pa) return;
+                    document.getElementById('copilot-action-card')?.remove();
+                    try {
+                        const entry = pa.data;
+                        const id    = `copi_${Date.now()}`;
+                        const freq  = entry.frequency || 'monthly';
+                        if (pa.intent === 'add_fixed_expense') {
+                            pa.monthData.fixed_expenses.push({
+                                id, name: entry.name, amount: entry.amount || 0,
+                                currency: entry.currency, category: entry.category,
+                                due_day: entry.due_day || null, frequency: freq
+                            });
+                        } else if (pa.intent === 'add_variable_expense') {
+                            pa.monthData.variable_expenses.push({
+                                id, name: entry.name, budget: entry.budget || 0,
+                                actual: entry.actual || 0, currency: entry.currency,
+                                category: entry.category, frequency: freq
+                            });
+                        } else if (pa.intent === 'add_income') {
+                            if (!pa.monthData.income_sources) pa.monthData.income_sources = [];
+                            pa.monthData.income_sources.push({
+                                id, name: entry.name, amount: entry.amount || 0,
+                                currency: entry.currency, category: entry.category,
+                                country_type: entry.country_type || 'home', frequency: freq
+                            });
+                        }
+                        pa.monthData.ai_forecast = null;
+                        await dataService.saveExpenses(pa.records);
+                        _expensesCache = pa.records;
+                        state.copilot.pendingAction = null;
+                        _copilotAppend(renderCopilotMessage('system', '✓ Entry saved successfully.'));
+                    } catch (err) {
+                        _copilotAppend(renderCopilotMessage('system', `⚠ Could not save: ${err.message}`));
+                    }
+                });
+
+                document.getElementById('copilot-cancel')?.addEventListener('click', () => {
+                    document.getElementById('copilot-action-card')?.remove();
+                    state.copilot.pendingAction = null;
+                    _copilotAppend(renderCopilotMessage('system', 'Cancelled.'));
+                });
+            } else {
+                // Query / unknown — show text reply
+                _copilotAppend(renderCopilotMessage('copilot', result.reply));
+            }
+            state.copilot.messages.push({ role: 'copilot', text: result.reply });
+        } catch (err) {
+            _copilotRemoveLoading();
+            _copilotAppend(renderCopilotMessage('system', `⚠ Error: ${err.message}`));
+        } finally {
+            send.disabled = false;
+            input.focus();
+        }
+    }
+
+    // Form submit
+    form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleSend(input?.value?.trim() || '');
+    });
+
+    // Suggestion chips
+    document.getElementById('copilot-chips')?.addEventListener('click', (e) => {
+        const chip = e.target.closest('.copilot-chip');
+        if (chip) handleSend(chip.dataset.text || chip.textContent.trim());
+    });
+}
+
 function updateDataModeBadge() {
     const badge = document.getElementById('data-mode-badge');
-    if (!badge) return;
     const isLive = (localStorage.getItem('smartmoney_data_mode') || 'local') === 'azure';
     badge.innerHTML = isLive
         ? `<span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
@@ -589,7 +837,9 @@ function goToWizardStep(step) {
 
     if (step === 1) {
         body.innerHTML = renderWizardStep1();
-        // Profile type selection
+        const nextBtn = document.getElementById('wizard-next-1');
+
+        // Card-based selection
         body.querySelectorAll('.profile-type-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 body.querySelectorAll('.profile-type-btn').forEach(b => {
@@ -599,10 +849,50 @@ function goToWizardStep(step) {
                 btn.classList.add('border-blue-500', 'bg-blue-50');
                 btn.classList.remove('border-gray-200');
                 state.wizard.type = btn.dataset.type;
-                document.getElementById('wizard-next-1').disabled = false;
+                nextBtn.disabled = false;
             });
         });
-        document.getElementById('wizard-next-1').addEventListener('click', () => goToWizardStep(2));
+
+        // AI inference helper
+        document.getElementById('ai-infer-type')?.addEventListener('click', async () => {
+            const input = document.getElementById('ai-type-input');
+            const result = document.getElementById('ai-type-result');
+            const text = input?.value?.trim();
+            if (!text) return;
+            const btn = document.getElementById('ai-infer-type');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>Analysing…</span>';
+            const inferred = await inferProfileType(text);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i><span>Analyse with AI</span>';
+            if (inferred) {
+                // Auto-select the inferred type
+                state.wizard.type = inferred;
+                body.querySelectorAll('.profile-type-btn').forEach(b => {
+                    b.classList.remove('border-blue-500', 'bg-blue-50');
+                    b.classList.add('border-gray-200');
+                });
+                const match = body.querySelector(`.profile-type-btn[data-type="${inferred}"]`);
+                if (match) {
+                    match.classList.add('border-blue-500', 'bg-blue-50');
+                    match.classList.remove('border-gray-200');
+                }
+                nextBtn.disabled = false;
+                if (result) {
+                    result.textContent = `✓ AI detected: ${inferred.charAt(0).toUpperCase() + inferred.slice(1)}`;
+                    result.classList.remove('hidden', 'text-red-500');
+                    result.classList.add('text-blue-600');
+                }
+            } else {
+                if (result) {
+                    result.textContent = 'Could not determine — please select manually above.';
+                    result.classList.remove('hidden', 'text-blue-600');
+                    result.classList.add('text-red-500');
+                }
+            }
+        });
+
+        nextBtn.addEventListener('click', () => goToWizardStep(2));
     }
 
     else if (step === 2) {
@@ -639,6 +929,25 @@ function goToWizardStep(step) {
             if (!sameChk.checked) {
                 state.wizard.residence_country = document.getElementById('residence-country')?.value;
             }
+
+            // Fire AI currency suggestion in the background while user transitions
+            const countries = state.countriesRef || [];
+            const home = countries.find(c => c.code === state.wizard.home_country);
+            const res  = !state.wizard.same_country && state.wizard.residence_country
+                ? countries.find(c => c.code === state.wizard.residence_country)
+                : null;
+            const allCurrencies = state.currenciesRef || [];
+            const relevantCodes = new Set();
+            if (home) home.currencies.forEach(c => relevantCodes.add(c));
+            if (res)  res.currencies.forEach(c => relevantCodes.add(c));
+            ['USD','EUR','GBP','AED','SGD','AUD','CAD','CHF'].forEach(c => relevantCodes.add(c));
+            const available = allCurrencies.filter(c => relevantCodes.has(c.code));
+            state.wizard._aiCurrencySuggestion = suggestCurrencyForCountry(
+                home?.name || state.wizard.home_country,
+                res?.name || null,
+                available.map(c => c.code)
+            );
+
             goToWizardStep(3);
         });
     }
@@ -658,7 +967,8 @@ function goToWizardStep(step) {
         const allCurrencies = state.currenciesRef || [];
         const available = allCurrencies.filter(c => relevantCodes.has(c.code));
 
-        body.innerHTML = renderWizardStep3(available);
+        // Render step immediately (with loading pill while AI resolves)
+        body.innerHTML = renderWizardStep3(available, null);
         const primarySel = document.getElementById('primary-currency');
         const nextBtn    = document.getElementById('wizard-next-3');
 
@@ -675,6 +985,38 @@ function goToWizardStep(step) {
                 .filter(v => v !== state.wizard.primary_currency);
             goToWizardStep(4);
         });
+
+        // Resolve AI currency suggestion and update UI
+        if (state.wizard._aiCurrencySuggestion) {
+            state.wizard._aiCurrencySuggestion.then(suggestion => {
+                const loadingPill = document.getElementById('ai-currency-loading');
+                if (!loadingPill) return; // user already moved on
+                if (suggestion) {
+                    // Replace loading pill with recommendation card
+                    loadingPill.outerHTML = `
+                        <div class="flex items-start space-x-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                            <i class="fas fa-wand-magic-sparkles text-blue-500 mt-0.5 text-sm"></i>
+                            <div>
+                                <p class="text-[12px] font-semibold text-blue-700">AI Recommended: <span class="font-bold">${suggestion.code}</span></p>
+                                <p class="text-[11px] text-blue-600 mt-0.5 leading-relaxed">${suggestion.reason}</p>
+                            </div>
+                        </div>`;
+                    // Pre-select the suggested currency
+                    if (primarySel) {
+                        primarySel.value = suggestion.code;
+                        state.wizard.primary_currency = suggestion.code;
+                        nextBtn.disabled = false;
+                    }
+                } else {
+                    // Remove loading pill quietly — user picks manually
+                    loadingPill.remove();
+                }
+            }).catch(() => {
+                document.getElementById('ai-currency-loading')?.remove();
+            });
+        } else {
+            document.getElementById('ai-currency-loading')?.remove();
+        }
     }
 
     else if (step === 4) {
@@ -691,12 +1033,23 @@ function goToWizardStep(step) {
                 email: document.getElementById('member-email').value.trim(),
                 role: document.getElementById('member-role').value
             };
+
+            // Fire AI welcome generation in the background while user transitions to step 5
+            const countries = state.countriesRef || [];
+            const home = countries.find(c => c.code === state.wizard.home_country);
+            state.wizard._aiWelcome = generateWelcomeInsight(
+                first,
+                state.wizard.type,
+                state.wizard.primary_currency,
+                home?.name || state.wizard.home_country
+            );
+
             goToWizardStep(5);
         });
     }
 
     else if (step === 5) {
-        body.innerHTML = renderWizardStep5(!isLiveMode);
+        body.innerHTML = renderWizardStep5(!isLiveMode, null);
         // Populate summary
         const countries = state.countriesRef || [];
         const home = countries.find(c => c.code === state.wizard.home_country);
@@ -714,6 +1067,35 @@ function goToWizardStep(step) {
             summary.innerHTML = rows.map(([k, v]) =>
                 `<div class="flex justify-between"><span class="text-gray-500">${k}</span><span class="font-semibold text-gray-800 ml-4 text-right">${v}</span></div>`
             ).join('');
+        }
+
+        // Resolve AI welcome and inject it when ready
+        if (state.wizard._aiWelcome) {
+            state.wizard._aiWelcome.then(msg => {
+                const loadingEl = document.getElementById('ai-welcome-loading');
+                if (!loadingEl) return; // user already moved on
+                if (msg) {
+                    loadingEl.outerHTML = `
+                        <div class="p-4 rounded-xl bg-gradient-to-br from-[#111827] to-[#1f2937] border border-gray-700 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-[40px]"></div>
+                            <div class="flex items-start space-x-3 relative z-10">
+                                <div class="h-8 w-8 rounded-lg bg-blue-600/30 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-wand-magic-sparkles text-blue-400 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-1.5">AI Welcome</p>
+                                    <p class="text-[13px] text-gray-200 leading-relaxed">${msg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                                </div>
+                            </div>
+                        </div>`;
+                } else {
+                    loadingEl.remove();
+                }
+            }).catch(() => {
+                document.getElementById('ai-welcome-loading')?.remove();
+            });
+        } else {
+            document.getElementById('ai-welcome-loading')?.remove();
         }
 
         // Use default path

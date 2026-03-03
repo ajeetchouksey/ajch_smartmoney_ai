@@ -1,0 +1,27 @@
+# Terraform state and provider cache
+.terraform/
+.terraform.lock.hcl
+
+# State files — never commit state (contains secrets)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Variable files with real values
+*.tfvars.json
+.env
+!.env.example
+!environments/*.tfvars
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Plan files (may contain sensitive values)
+*.tfplan

@@ -55,51 +55,131 @@ export const renderKpiCard = (title, value, trend, iconClass, bgColor = "bg-whit
     `;
 };
 
-export const renderChatInterface = () => {
-    return `
-        <div class="flex flex-col h-[calc(100vh-160px)] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            
-            <!-- Chat History Area -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50" id="chat-messages">
-                <!-- AI Welcome Message -->
-                <div class="flex space-x-4 max-w-3xl">
-                    <div class="flex-shrink-0 mt-1">
-                        <div class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                            <i class="fas fa-sparkles text-[12px]"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white border border-gray-200 p-4.5 rounded-2xl rounded-tl-sm text-[#111827] text-[14px] leading-relaxed shadow-sm">
-                        <p class="font-semibold text-[#111827] mb-1 flex items-center">SmartMoney AI</p>
-                        Hello! I'm your AI financial assistant. How can I help you today? I can analyze spending, check portfolios, or answer finance questions.
-                    </div>
+export const renderChatInterface = () => renderCopilotInterface();
+
+export const renderCopilotInterface = () => `
+    <div class="flex flex-col h-[calc(100vh-160px)] bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-white">
+            <div class="flex items-center space-x-3">
+                <div class="h-8 w-8 rounded-lg bg-[#111827] flex items-center justify-center">
+                    <i class="fas fa-wand-magic-sparkles text-blue-400 text-[12px]"></i>
                 </div>
-                
-                <!-- Example User Message -->
-                <div class="flex space-x-4 max-w-3xl ml-auto flex-row-reverse space-x-reverse">
-                    <div class="flex-shrink-0 mt-1">
-                        <img class="h-8 w-8 rounded-full border border-gray-200 shadow-sm" src="https://ui-avatars.com/api/?name=Alex&background=3b82f6&color=fff" />
-                    </div>
-                    <div class="bg-[#111827] text-white p-4.5 rounded-2xl rounded-tr-sm text-[14px] shadow-sm">
-                        What was my total spending on dining last month?
-                    </div>
+                <div>
+                    <p class="text-[14px] font-bold text-gray-900">SmartMoney Copilot</p>
+                    <p class="text-[11px] text-gray-400">Powered by Azure AI Foundry</p>
                 </div>
             </div>
+            <span class="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-700"><i class="fas fa-circle text-emerald-400 text-[8px] mr-1"></i>Active</span>
+        </div>
 
-            <!-- Input Area -->
-            <div class="p-4 bg-white border-t border-gray-200">
-                <form class="flex items-center space-x-2 max-w-4xl mx-auto rounded-xl border border-gray-300 bg-gray-50 px-2 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-inner">
-                    <button type="button" class="text-gray-400 hover:text-blue-600 p-2 rounded-lg transition-colors">
-                        <i class="fas fa-paperclip text-lg"></i>
-                    </button>
-                    <input type="text" placeholder="Message your financial AI..." class="flex-1 bg-transparent py-2.5 px-2 focus:outline-none text-[#111827] placeholder-gray-400 font-medium text-[15px]">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white p-2 h-10 w-10 flex items-center justify-center rounded-lg transition-all hover:scale-105 shadow-md shadow-blue-500/30">
-                        <i class="fas fa-arrow-up text-sm font-bold"></i>
-                    </button>
-                </form>
-                <p class="text-center text-[12px] text-gray-400 mt-3 font-medium"><i class="fas fa-shield-halved mr-1 opacity-70"></i> AI can make mistakes. Consider verifying important info.</p>
+        <!-- Messages -->
+        <div id="copilot-messages" class="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-gray-50/50">
+
+            <!-- Welcome -->
+            <div class="flex space-x-3 max-w-2xl">
+                <div class="h-7 w-7 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i class="fas fa-wand-magic-sparkles text-blue-400 text-[10px]"></i>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <p class="text-[13px] font-semibold text-gray-900 mb-1">SmartMoney Copilot</p>
+                    <p class="text-[13px] text-gray-700 leading-relaxed">Hi! I can add expenses, income, and answer questions about your finances. Try something like:</p>
+                    <div id="copilot-chips" class="flex flex-wrap gap-2 mt-3">
+                        ${[
+                            'Add Netflix £12.99 monthly',
+                            'I got paid £4,500 this month',
+                            'Add groceries budget £400',
+                            'What\'s my total fixed cost?',
+                            'Add rent £1,200 due on 1st'
+                        ].map(s => `<button class="copilot-chip px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-[12px] font-medium transition-colors">${s}</button>`).join('')}
+                    </div>
+                </div>
             </div>
         </div>
-    `;
+
+        <!-- Input -->
+        <div class="p-4 bg-white border-t border-gray-100">
+            <form id="copilot-form" class="flex items-center space-x-2 rounded-xl border border-gray-300 bg-gray-50 px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                <input id="copilot-input" type="text" placeholder="e.g. Add Netflix £12.99 monthly or What is my savings rate?" autocomplete="off"
+                    class="flex-1 bg-transparent py-2 text-[14px] text-gray-800 placeholder-gray-400 focus:outline-none">
+                <button id="copilot-send" type="submit" class="bg-[#111827] hover:bg-[#1f2937] text-white h-9 w-9 flex items-center justify-center rounded-lg transition-colors flex-shrink-0">
+                    <i class="fas fa-arrow-up text-xs"></i>
+                </button>
+            </form>
+            <p class="text-center text-[11px] text-gray-400 mt-2"><i class="fas fa-shield-halved mr-1 opacity-70"></i>Copilot can make mistakes. Verify important financial entries.</p>
+        </div>
+    </div>
+`;
+
+/** Renders a single chat bubble. role: 'user'|'copilot'|'system' */
+export const renderCopilotMessage = (role, text) => {
+    const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    if (role === 'user') {
+        return `<div class="flex space-x-3 max-w-2xl ml-auto flex-row-reverse space-x-reverse">
+            <div class="h-7 w-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5 text-white text-[10px] font-bold">U</div>
+            <div class="bg-[#111827] text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
+                <p class="text-[13px] leading-relaxed">${safe}</p>
+            </div>
+        </div>`;
+    }
+    if (role === 'system') {
+        return `<div class="flex items-center justify-center">
+            <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-[11px]">${safe}</span>
+        </div>`;
+    }
+    return `<div class="flex space-x-3 max-w-2xl">
+        <div class="h-7 w-7 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="fas fa-wand-magic-sparkles text-blue-400 text-[10px]"></i>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+            <p class="text-[13px] font-semibold text-gray-900 mb-1">SmartMoney Copilot</p>
+            <p class="text-[13px] text-gray-700 leading-relaxed">${safe}</p>
+        </div>
+    </div>`;
+};
+
+/** Renders the pending-action confirmation card inside the chat. */
+export const renderCopilotActionCard = (action) => {
+    const intentLabel = {
+        add_fixed_expense:    '📌 Add Fixed Expense',
+        add_variable_expense: '📊 Add Variable Expense',
+        add_income:           '💰 Add Income'
+    }[action.intent] || 'Action';
+
+    const d = action.data || {};
+    const fields = [];
+    if (d.name)      fields.push(['Name',      d.name]);
+    if (d.amount != null)  fields.push(['Amount',    `${d.currency || ''} ${d.amount}`]);
+    if (d.budget != null)  fields.push(['Budget',    `${d.currency || ''} ${d.budget}`]);
+    if (d.actual != null && d.actual !== 0) fields.push(['Actual', `${d.currency || ''} ${d.actual}`]);
+    if (d.category)  fields.push(['Category',  d.category]);
+    if (d.frequency) fields.push(['Frequency', d.frequency]);
+    if (d.due_day)   fields.push(['Due Day',   `${d.due_day}${d.due_day===1?'st':d.due_day===2?'nd':d.due_day===3?'rd':'th'} of month`]);
+    if (d.country_type) fields.push(['Source',  d.country_type]);
+
+    return `<div class="flex space-x-3 max-w-2xl" id="copilot-action-card">
+        <div class="h-7 w-7 rounded-lg bg-[#111827] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="fas fa-wand-magic-sparkles text-blue-400 text-[10px]"></i>
+        </div>
+        <div class="bg-white border border-blue-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm w-full">
+            <p class="text-[13px] font-semibold text-gray-900 mb-2">${intentLabel}</p>
+            <div class="space-y-1 mb-3">
+                ${fields.map(([k,v]) => `<div class="flex justify-between text-[12px]">
+                    <span class="text-gray-500">${k}</span>
+                    <span class="font-semibold text-gray-800">${v}</span>
+                </div>`).join('')}
+            </div>
+            <div class="flex space-x-2">
+                <button id="copilot-confirm" class="flex-1 py-2 bg-[#111827] hover:bg-[#1f2937] text-white text-[12px] font-semibold rounded-lg transition-colors">
+                    <i class="fas fa-check mr-1.5"></i>Confirm
+                </button>
+                <button id="copilot-cancel" class="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[12px] font-semibold rounded-lg transition-colors">
+                    <i class="fas fa-times mr-1.5"></i>Cancel
+                </button>
+            </div>
+        </div>
+    </div>`;
 };
 
 // ---------------------------------------------------------------------------
@@ -146,6 +226,21 @@ export const renderWizardStep1 = () => `
                 </button>
             </div>
         </div>
+        <!-- AI inference helper -->
+        <details class="group">
+            <summary class="flex items-center space-x-2 text-[12px] text-gray-400 cursor-pointer select-none hover:text-blue-500 transition-colors list-none">
+                <i class="fas fa-wand-magic-sparkles text-blue-400"></i>
+                <span>Not sure? Let AI choose for you</span>
+                <i class="fas fa-chevron-down text-[10px] transition-transform group-open:rotate-180"></i>
+            </summary>
+            <div class="mt-3 space-y-2">
+                <textarea id="ai-type-input" rows="2" placeholder="Describe your situation, e.g. &quot;I manage budgets for me, my partner and two kids&quot;…" class="w-full px-4 py-3 rounded-xl border border-gray-300 text-[13px] text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-gray-400"></textarea>
+                <button id="ai-infer-type" class="flex items-center space-x-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[12px] font-semibold rounded-lg border border-blue-200 transition-colors">
+                    <i class="fas fa-wand-magic-sparkles"></i><span>Analyse with AI</span>
+                </button>
+                <p id="ai-type-result" class="text-[12px] text-gray-500 hidden"></p>
+            </div>
+        </details>
         <button id="wizard-next-1" disabled class="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all text-[14px]">Continue</button>
     </div>
 `;
@@ -190,13 +285,25 @@ export const renderWizardStep2 = (countries) => `
     </div>
 `;
 
-export const renderWizardStep3 = (availableCurrencies) => `
+export const renderWizardStep3 = (availableCurrencies, aiSuggestion = null) => `
     <div class="space-y-6">
         <div>
             <p class="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-1">Step 3 of 5</p>
             <h2 class="text-2xl font-bold text-gray-900">Your Currencies</h2>
             <p class="text-[14px] text-gray-500 mt-2 leading-relaxed">Select your primary currency for reports. You can also add additional currencies if you hold accounts in multiple currencies.</p>
         </div>
+        ${aiSuggestion ? `
+        <div class="flex items-start space-x-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+            <i class="fas fa-wand-magic-sparkles text-blue-500 mt-0.5 text-sm"></i>
+            <div>
+                <p class="text-[12px] font-semibold text-blue-700">AI Recommended: <span class="font-bold">${aiSuggestion.code}</span></p>
+                <p class="text-[11px] text-blue-600 mt-0.5 leading-relaxed">${aiSuggestion.reason}</p>
+            </div>
+        </div>` : `
+        <div id="ai-currency-loading" class="flex items-center space-x-2 p-3 rounded-xl bg-gray-50 border border-gray-100">
+            <i class="fas fa-circle-notch fa-spin text-blue-400 text-sm"></i>
+            <p class="text-[12px] text-gray-500">AI is analysing your location to suggest a currency…</p>
+        </div>`}
         <div class="space-y-4">
             <div>
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Primary Currency</label>
@@ -264,13 +371,30 @@ export const renderWizardStep4 = (profileType) => `
     </div>
 `;
 
-export const renderWizardStep5 = (isLocalMode) => `
+export const renderWizardStep5 = (isLocalMode, aiWelcome = null) => `
     <div class="space-y-6">
         <div>
             <p class="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-1">Step 5 of 5</p>
             <h2 class="text-2xl font-bold text-gray-900">Almost Done!</h2>
             <p class="text-[14px] text-gray-500 mt-2 leading-relaxed">Your profile is ready. ${isLocalMode ? 'Since you\'re in Local mode, choose where to keep your data files on this device.' : 'Your data will be stored in the connected Azure database.'}</p>
         </div>
+        ${aiWelcome ? `
+        <div class="p-4 rounded-xl bg-gradient-to-br from-[#111827] to-[#1f2937] border border-gray-700 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-[40px]"></div>
+            <div class="flex items-start space-x-3 relative z-10">
+                <div class="h-8 w-8 rounded-lg bg-blue-600/30 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-wand-magic-sparkles text-blue-400 text-xs"></i>
+                </div>
+                <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-1.5">AI Welcome</p>
+                    <p class="text-[13px] text-gray-200 leading-relaxed">${aiWelcome}</p>
+                </div>
+            </div>
+        </div>` : `
+        <div id="ai-welcome-loading" class="flex items-center space-x-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+            <i class="fas fa-circle-notch fa-spin text-blue-400"></i>
+            <p class="text-[13px] text-gray-500">Preparing your personalised welcome…</p>
+        </div>`}
         ${isLocalMode ? `
         <div class="p-4 rounded-xl bg-amber-50 border border-amber-200">
             <div class="flex items-start space-x-3">
@@ -807,22 +931,45 @@ export const renderExpenseEntryModal = (type, availableCurrencies, displayCur) =
     const cats  = type === 'fixed' ? FIXED_CATEGORIES : VARIABLE_CATEGORIES;
     const title = type === 'fixed' ? 'Add Fixed Expense' : 'Add Variable Expense';
     const curs  = availableCurrencies && availableCurrencies.length > 1 ? availableCurrencies : null;
+    const freqOptions = ['Monthly','Weekly','Yearly','One-time'];
     return `
     <div id="exp-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md p-6 space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-bold text-gray-900">${title}</h3>
                 <button id="close-exp-modal" class="h-8 w-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-colors"><i class="fas fa-times"></i></button>
             </div>
+
+            <!-- Smart Fill -->
+            <div class="p-3 rounded-xl bg-blue-50 border border-blue-100 space-y-2">
+                <p class="text-[11px] font-semibold text-blue-700 uppercase tracking-wide"><i class="fas fa-wand-magic-sparkles mr-1"></i>Smart Fill with AI</p>
+                <div class="flex space-x-2">
+                    <input id="exp-smart-input" type="text" placeholder='e.g. "Netflix £12.99 monthly" or "Rent 1200 due 1st"'
+                        class="flex-1 px-3 py-2 rounded-lg border border-blue-200 bg-white text-[12px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-400 placeholder-gray-400">
+                    <button id="exp-smart-btn" type="button" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold transition-colors whitespace-nowrap flex items-center space-x-1.5">
+                        <i class="fas fa-wand-magic-sparkles text-[10px]"></i><span>Fill</span>
+                    </button>
+                </div>
+                <p id="exp-smart-status" class="text-[11px] text-blue-600 hidden"></p>
+            </div>
+
             <div>
                 <label class="text-[12px] font-semibold text-gray-600 block mb-1">Name</label>
                 <input id="exp-name" type="text" placeholder="e.g. Netflix" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
             </div>
-            <div>
-                <label class="text-[12px] font-semibold text-gray-600 block mb-1">Category</label>
-                <select id="exp-category" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    ${cats.map(c => `<option value="${c}">${c}</option>`).join('')}
-                </select>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[12px] font-semibold text-gray-600 block mb-1">Category</label>
+                    <select id="exp-category" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                        ${cats.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[12px] font-semibold text-gray-600 block mb-1">Frequency</label>
+                    <select id="exp-frequency" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                        ${freqOptions.map(f => `<option value="${f.toLowerCase().replace(' ','-')}">${f}</option>`).join('')}
+                    </select>
+                </div>
             </div>
             ${curs ? `
             <div>
@@ -871,13 +1018,28 @@ export const renderIncomeEntryModal = (availableCurrencies, homeCountry, residen
     const homeLabel = homeCountry ? `${homeCountry.flag} Home (${homeCountry.name})` : 'Home Country';
     const resLabel  = residenceCountry ? `${residenceCountry.flag} Residence (${residenceCountry.name})` : 'Residence Country';
     const showRes   = residenceCountry && (!homeCountry || residenceCountry.code !== homeCountry.code);
+    const freqOptions = [['monthly','Monthly'],['bi-weekly','Bi-weekly'],['weekly','Weekly'],['yearly','Yearly'],['one-time','One-time']];
     return `
     <div id="income-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md p-6 space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-bold text-gray-900">Add Income Source</h3>
                 <button id="close-income-modal" class="h-8 w-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-colors"><i class="fas fa-times"></i></button>
             </div>
+
+            <!-- Smart Fill -->
+            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100 space-y-2">
+                <p class="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide"><i class="fas fa-wand-magic-sparkles mr-1"></i>Smart Fill with AI</p>
+                <div class="flex space-x-2">
+                    <input id="inc-smart-input" type="text" placeholder='e.g. "Salary £4500 monthly" or "Freelance AED 2000"'
+                        class="flex-1 px-3 py-2 rounded-lg border border-emerald-200 bg-white text-[12px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400 placeholder-gray-400">
+                    <button id="inc-smart-btn" type="button" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[12px] font-semibold transition-colors whitespace-nowrap flex items-center space-x-1.5">
+                        <i class="fas fa-wand-magic-sparkles text-[10px]"></i><span>Fill</span>
+                    </button>
+                </div>
+                <p id="inc-smart-status" class="text-[11px] text-emerald-600 hidden"></p>
+            </div>
+
             <div>
                 <label class="text-[12px] font-semibold text-gray-600 block mb-1">Name</label>
                 <input id="inc-name" type="text" placeholder="e.g. Salary" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
@@ -890,15 +1052,23 @@ export const renderIncomeEntryModal = (availableCurrencies, homeCountry, residen
                     </select>
                 </div>
                 <div>
+                    <label class="text-[12px] font-semibold text-gray-600 block mb-1">Frequency</label>
+                    <select id="inc-frequency" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                        ${freqOptions.map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
                     <label class="text-[12px] font-semibold text-gray-600 block mb-1">Currency</label>
                     <select id="inc-currency" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                         ${curs.map(c => `<option value="${c.code}" ${c.code === displayCur ? 'selected' : ''}>${c.code}</option>`).join('')}
                     </select>
                 </div>
-            </div>
-            <div>
-                <label class="text-[12px] font-semibold text-gray-600 block mb-1">Amount</label>
-                <input id="inc-amount" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                <div>
+                    <label class="text-[12px] font-semibold text-gray-600 block mb-1">Amount</label>
+                    <input id="inc-amount" type="number" min="0" step="0.01" placeholder="0.00" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                </div>
             </div>
             <div>
                 <label class="text-[12px] font-semibold text-gray-600 block mb-1">Country Association</label>
