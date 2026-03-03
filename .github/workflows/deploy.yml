@@ -25,9 +25,6 @@ jobs:
   terraform:
     name: Plan & Deploy Infrastructure
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: infra/terraform
 
     steps:
       - name: Checkout code
@@ -47,16 +44,20 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        run: terraform init
+        working-directory: infra/terraform
+        run: terraform init -backend-config="key=smartmoney/${{ env.ENVIRONMENT }}.tfstate"
 
       - name: Terraform Format Check
+        working-directory: infra/terraform
         run: terraform fmt -check -recursive
         continue-on-error: true
 
       - name: Terraform Validate
+        working-directory: infra/terraform
         run: terraform validate
 
       - name: Terraform Plan
+        working-directory: infra/terraform
         run: terraform plan -var-file=environments/${{ env.ENVIRONMENT }}.tfvars -out=${{ env.ENVIRONMENT }}.tfplan
 
       - name: Comment Plan on PR
@@ -78,10 +79,12 @@ jobs:
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: infra/terraform
         run: terraform apply -auto-approve ${{ env.ENVIRONMENT }}.tfplan
 
       - name: Export Terraform Outputs
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: infra/terraform
         run: |
           echo "### Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -92,4 +95,5 @@ jobs:
 
       - name: Cleanup
         if: always()
+        working-directory: infra/terraform
         run: rm -f ${{ env.ENVIRONMENT }}.tfplan
