@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-03-02T00:00:00Z",
+  "data": {
+    "setup_complete": false,
+    "type": null,
+    "home_country": null,
+    "same_country": true,
+    "residence_country": null,
+    "primary_currency": null,
+    "additional_currencies": [],
+    "local_data_path": "",
+    "members": []
+  }
+}

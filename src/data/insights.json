@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-03-02T00:00:00Z",
+  "data": [
+    {
+      "id": "ins_001",
+      "type": "warning",
+      "title": "Dining spend up 15%",
+      "body": "You spent $280 on dining so far this month, which is 15% more than your March average.",
+      "category": "Spending",
+      "created_at": "2026-03-02T08:00:00Z",
+      "read": false
+    },
+    {
+      "id": "ins_002",
+      "type": "success",
+      "title": "Vacation goal on track",
+      "body": "You saved $200 towards your Vacation goal this week. You're 65% of the way there!",
+      "category": "Savings",
+      "created_at": "2026-03-01T10:00:00Z",
+      "read": false
+    },
+    {
+      "id": "ins_003",
+      "type": "info",
+      "title": "NVDA up 3.2% today",
+      "body": "Your NVIDIA position gained $27.20 today. Consider reviewing your target price.",
+      "category": "Portfolio",
+      "created_at": "2026-03-01T16:30:00Z",
+      "read": true
+    }
+  ]
+}

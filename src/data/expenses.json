@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-03-02T00:00:00Z",
+  "data": [
+    {
+      "id": "exp_2026_03",
+      "month": "2026-03",
+      "opening_balance": 8500.00,
+      "currency": "USD",
+      "income_sources": [
+        { "id": "inc_1", "name": "Salary",          "amount": 6500.00, "currency": "USD", "category": "Employment", "country_type": "home" },
+        { "id": "inc_2", "name": "Freelance Project", "amount": 800.00,  "currency": "USD", "category": "Freelance",   "country_type": "other" }
+      ],
+      "fixed_expenses": [
+        { "id": "fx_1", "name": "Rent / Mortgage",     "amount": 1800.00, "category": "Housing",       "due_day": 1  },
+        { "id": "fx_2", "name": "Car Insurance",        "amount": 120.00,  "category": "Insurance",     "due_day": 5  },
+        { "id": "fx_3", "name": "Internet",             "amount": 65.00,   "category": "Utilities",     "due_day": 10 },
+        { "id": "fx_4", "name": "Electricity",          "amount": 90.00,   "category": "Utilities",     "due_day": 12 },
+        { "id": "fx_5", "name": "Netflix",              "amount": 15.99,   "category": "Subscriptions", "due_day": 18 },
+        { "id": "fx_6", "name": "Gym Membership",       "amount": 45.00,   "category": "Subscriptions", "due_day": 20 }
+      ],
+      "variable_expenses": [
+        { "id": "vx_1", "name": "Groceries",            "budget": 400.00, "actual": 320.00, "category": "Food"          },
+        { "id": "vx_2", "name": "Dining Out",           "budget": 200.00, "actual": 275.00, "category": "Food"          },
+        { "id": "vx_3", "name": "Fuel / Transport",     "budget": 150.00, "actual": 140.00, "category": "Transport"     },
+        { "id": "vx_4", "name": "Entertainment",        "budget": 100.00, "actual": 60.00,  "category": "Entertainment" },
+        { "id": "vx_5", "name": "Clothing & Shopping",  "budget": 150.00, "actual": 220.00, "category": "Shopping"      }
+      ],
+      "ai_forecast": null
+    }
+  ]
+}

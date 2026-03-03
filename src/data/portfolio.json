@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-03-02T00:00:00Z",
+  "data": {
+    "total_value": 128400.00,
+    "day_change": 1072.50,
+    "day_change_pct": 0.84,
+    "holdings": [
+      {
+        "ticker": "AAPL",
+        "name": "Apple Inc.",
+        "shares": 42,
+        "avg_cost": 165.20,
+        "current_price": 211.50,
+        "value": 8883.00,
+        "gain_loss_pct": 28.0
+      },
+      {
+        "ticker": "MSFT",
+        "name": "Microsoft Corp.",
+        "shares": 18,
+        "avg_cost": 320.00,
+        "current_price": 415.75,
+        "value": 7483.50,
+        "gain_loss_pct": 29.9
+      },
+      {
+        "ticker": "NVDA",
+        "name": "NVIDIA Corp.",
+        "shares": 10,
+        "avg_cost": 480.00,
+        "current_price": 875.20,
+        "value": 8752.00,
+        "gain_loss_pct": 82.3
+      },
+      {
+        "ticker": "BTC",
+        "name": "Bitcoin",
+        "shares": 1.25,
+        "avg_cost": 42000.00,
+        "current_price": 82500.00,
+        "value": 103125.00,
+        "gain_loss_pct": 96.4
+      }
+    ]
+  }
+}

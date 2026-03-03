@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-03-02T00:00:00Z",
+  "data": [
+    {
+      "id": "txn_001",
+      "date": "2026-03-01",
+      "description": "Whole Foods Market",
+      "category": "Groceries",
+      "amount": -87.43,
+      "currency": "USD",
+      "status": "cleared"
+    },
+    {
+      "id": "txn_002",
+      "date": "2026-03-01",
+      "description": "Salary Deposit",
+      "category": "Income",
+      "amount": 5200.00,
+      "currency": "USD",
+      "status": "cleared"
+    },
+    {
+      "id": "txn_003",
+      "date": "2026-02-28",
+      "description": "The Cheesecake Factory",
+      "category": "Dining",
+      "amount": -64.20,
+      "currency": "USD",
+      "status": "cleared"
+    },
+    {
+      "id": "txn_004",
+      "date": "2026-02-27",
+      "description": "Netflix Subscription",
+      "category": "Entertainment",
+      "amount": -15.99,
+      "currency": "USD",
+      "status": "cleared"
+    },
+    {
+      "id": "txn_005",
+      "date": "2026-02-26",
+      "description": "Amazon Purchase",
+      "category": "Shopping",
+      "amount": -122.75,
+      "currency": "USD",
+      "status": "pending"
+    },
+    {
+      "id": "txn_006",
+      "date": "2026-02-25",
+      "description": "Starbucks",
+      "category": "Dining",
+      "amount": -7.85,
+      "currency": "USD",
+      "status": "cleared"
+    }
+  ]
+}

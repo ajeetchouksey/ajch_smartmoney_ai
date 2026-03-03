@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# AI Settings — contains API keys, never commit
+src/js/ai/ai_settings.js
+
+# Azure
+local.settings.json
+api/local.settings.json
+.azure/
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+.env
+.env.local
