@@ -110,30 +110,3 @@ variable "cosmos_primary_key" {
   description = "Cosmos DB primary key (stored as a Container App secret)."
   sensitive   = true
 }
-
-# ── Azure AI Foundry ──────────────────────────────────────────────────────────
-
-variable "foundry_endpoint" {
-  type        = string
-  description = "Azure AI Foundry project endpoint URL."
-  default     = ""
-}
-
-variable "foundry_api_key" {
-  type        = string
-  description = "Azure AI Foundry API key (stored as a Container App secret)."
-  sensitive   = true
-  default     = ""
-}
-
-variable "foundry_model" {
-  type        = string
-  description = "AI model deployment name (e.g. gpt-4o-mini)."
-  default     = "gpt-4o-mini"
-}
-
-variable "foundry_api_version" {
-  type        = string
-  description = "Azure OpenAI API version string."
-  default     = "2024-08-01-preview"
-}

@@ -102,11 +102,6 @@ module "containers" {
 
   cosmos_endpoint    = module.cosmosdb.endpoint
   cosmos_primary_key = module.cosmosdb.primary_key
-
-  foundry_endpoint    = var.foundry_endpoint
-  foundry_api_key     = var.foundry_api_key
-  foundry_model       = var.foundry_model
-  foundry_api_version = var.foundry_api_version
 }
 
 # Allow the API container app to pull images from ACR

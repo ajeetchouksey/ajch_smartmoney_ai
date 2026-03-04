@@ -36,9 +36,3 @@ worker_cpu          = 0.25
 worker_memory       = "0.5Gi"
 worker_min_replicas = 0
 worker_max_replicas = 2
-
-# Azure AI Foundry — fill in after creating your Foundry project
-# foundry_endpoint    = "https://YOUR-PROJECT.services.ai.azure.com"
-# foundry_model       = "gpt-4o-mini"
-# foundry_api_version = "2024-08-01-preview"
-# foundry_api_key is set via TF_VAR_foundry_api_key env var — never commit it

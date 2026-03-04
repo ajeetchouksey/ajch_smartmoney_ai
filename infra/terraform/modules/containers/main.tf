@@ -62,14 +62,6 @@ resource "azurerm_container_app" "api" {
     value = var.cosmos_primary_key
   }
 
-  dynamic "secret" {
-    for_each = var.foundry_api_key != "" ? ["enabled"] : []
-    content {
-      name  = "foundry-api-key"
-      value = var.foundry_api_key
-    }
-  }
-
   ingress {
     external_enabled = true
     target_port      = var.api_target_port
@@ -104,30 +96,6 @@ resource "azurerm_container_app" "api" {
         name  = "APP_ENV"
         value = "production"
       }
-
-      env {
-        name  = "FOUNDRY_PROJECT_ENDPOINT"
-        value = var.foundry_endpoint
-      }
-
-      env {
-        name  = "FOUNDRY_MODEL_DEPLOYMENT_NAME"
-        value = var.foundry_model
-      }
-
-      env {
-        name  = "FOUNDRY_API_VERSION"
-        value = var.foundry_api_version
-      }
-
-      # TODO: Fix dynamic block syntax for env - temporarily disabled
-      # dynamic "env" {
-      #   for_each = var.foundry_api_key != "" ? ["enabled"] : []
-      #   content {
-      #     name        = "FOUNDRY_API_KEY"
-      #     secret_name = "foundry-api-key"
-      #   }
-      # }
     }
 
     # Scale on concurrent HTTP requests
@@ -155,15 +123,6 @@ resource "azurerm_container_app" "worker" {
     name  = "cosmos-key"
     value = var.cosmos_primary_key
   }
-
-  # TODO: Fix dynamic block syntax - temporarily disabled
-  # dynamic "secret" {
-  #   for_each = var.foundry_api_key != "" ? ["enabled"] : []
-  #   content {
-  #     name  = "foundry-api-key"
-  #     value = var.foundry_api_key
-  #   }
-  # }
 
   # No ingress — worker is internal only
   template {
@@ -195,30 +154,6 @@ resource "azurerm_container_app" "worker" {
         name  = "APP_ENV"
         value = "production"
       }
-
-      env {
-        name  = "FOUNDRY_PROJECT_ENDPOINT"
-        value = var.foundry_endpoint
-      }
-
-      env {
-        name  = "FOUNDRY_MODEL_DEPLOYMENT_NAME"
-        value = var.foundry_model
-      }
-
-      env {
-        name  = "FOUNDRY_API_VERSION"
-        value = var.foundry_api_version
-      }
-
-      # TODO: Fix dynamic block syntax for env - temporarily disabled
-      # dynamic "env" {
-      #   for_each = var.foundry_api_key != "" ? ["enabled"] : []
-      #   content {
-      #     name        = "FOUNDRY_API_KEY"
-      #     secret_name = "foundry-api-key"
-      #   }
-      # }
     }
   }
 }

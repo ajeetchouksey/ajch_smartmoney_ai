@@ -160,30 +160,3 @@ variable "worker_max_replicas" {
   description = "Maximum worker replica count."
   default     = 3
 }
-
-# ── Azure AI Foundry ──────────────────────────────────────────────────────────
-
-variable "foundry_endpoint" {
-  type        = string
-  description = "Azure AI Foundry project endpoint URL."
-  default     = ""
-}
-
-variable "foundry_api_key" {
-  type        = string
-  description = "Azure AI Foundry API key. Leave empty to use managed identity auth."
-  sensitive   = true
-  default     = ""
-}
-
-variable "foundry_model" {
-  type        = string
-  description = "AI model deployment name (e.g. gpt-4o-mini)."
-  default     = "gpt-4o-mini"
-}
-
-variable "foundry_api_version" {
-  type        = string
-  description = "Azure OpenAI API version string."
-  default     = "2024-08-01-preview"
-}
