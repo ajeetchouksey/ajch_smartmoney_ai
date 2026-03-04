@@ -63,7 +63,7 @@ resource "azurerm_container_app" "api" {
   }
 
   dynamic "secret" {
-    for_each = var.foundry_api_key != "" ? toset(["1"]) : toset([])
+    for_each = var.foundry_api_key != "" ? ["enabled"] : []
     content {
       name  = "foundry-api-key"
       value = var.foundry_api_key
@@ -121,7 +121,7 @@ resource "azurerm_container_app" "api" {
       }
 
       dynamic "env" {
-        for_each = var.foundry_api_key != "" ? toset(["1"]) : toset([])
+        for_each = var.foundry_api_key != "" ? ["enabled"] : []
         content {
           name        = "FOUNDRY_API_KEY"
           secret_name = "foundry-api-key"
@@ -156,7 +156,7 @@ resource "azurerm_container_app" "worker" {
   }
 
   dynamic "secret" {
-    for_each = var.foundry_api_key != "" ? toset(["1"]) : toset([])
+    for_each = var.foundry_api_key != "" ? ["enabled"] : []
     content {
       name  = "foundry-api-key"
       value = var.foundry_api_key
@@ -210,7 +210,7 @@ resource "azurerm_container_app" "worker" {
       }
 
       dynamic "env" {
-        for_each = var.foundry_api_key != "" ? toset(["1"]) : toset([])
+        for_each = var.foundry_api_key != "" ? ["enabled"] : []
         content {
           name        = "FOUNDRY_API_KEY"
           secret_name = "foundry-api-key"
