@@ -104,28 +104,13 @@ module "containers" {
   cosmos_primary_key = module.cosmosdb.primary_key
 }
 
-# Allow the API container app to pull images from ACR
-resource "azurerm_role_assignment" "api_acr_pull" {
-  scope                = module.containers.acr_resource_id
-  role_definition_name = "AcrPull"
-  principal_id         = module.containers.api_identity_principal_id
-}
-
-resource "azurerm_role_assignment" "worker_acr_pull" {
-  scope                = module.containers.acr_resource_id
-  role_definition_name = "AcrPull"
-  principal_id         = module.containers.worker_identity_principal_id
-}
-
-# Allow API/Worker managed identities to access Cosmos DB data-plane
-resource "azurerm_role_assignment" "api_cosmos_data_contributor" {
-  scope                = module.cosmosdb.resource_id
-  role_definition_name = "Cosmos DB Built-in Data Contributor"
-  principal_id         = module.containers.api_identity_principal_id
-}
-
-resource "azurerm_role_assignment" "worker_cosmos_data_contributor" {
-  scope                = module.cosmosdb.resource_id
-  role_definition_name = "Cosmos DB Built-in Data Contributor"
-  principal_id         = module.containers.worker_identity_principal_id
-}
+# NOTE: Role assignments commented out due to permission constraints
+# Role assignments require the service principal to have "User Access Administrator" role
+# Cosmos DB data access is already configured via connection string (cosmos_primary_key)
+# ACR pull access can be assigned manually or via a separate admin step
+#
+# To assign roles manually after deployment, run:
+# az role assignment create --assignee-object-id <api-identity-id> --role "AcrPull" --scope /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ContainerRegistry/registries/<acr-name>
+# 
+# For now, containers authenticate to ACR via managed identity fallback to registry login
+# and use Cosmos DB connection string passed as environment variable

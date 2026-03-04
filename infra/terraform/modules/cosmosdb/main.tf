@@ -73,7 +73,7 @@ resource "azurerm_cosmosdb_sql_container" "containers" {
   resource_group_name   = var.resource_group_name
   account_name          = azurerm_cosmosdb_account.main.name
   database_name         = azurerm_cosmosdb_sql_database.main.name
-  partition_key_path    = each.value
+  partition_key_paths   = [each.value]
   partition_key_version = 2
 
   indexing_policy {
