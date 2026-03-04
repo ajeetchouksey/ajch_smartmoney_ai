@@ -63,7 +63,7 @@ resource "azurerm_container_app" "api" {
   }
 
   dynamic "secret" {
-    for_each = var.foundry_api_key != "" ? [1] : []
+    for_each = var.foundry_api_key != "" ? toset(["enabled"]) : toset([])
     content {
       name  = "foundry-api-key"
       value = var.foundry_api_key
@@ -106,7 +106,7 @@ resource "azurerm_container_app" "api" {
       }
 
       dynamic "env" {
-        for_each = var.foundry_endpoint != "" ? [1] : []
+        for_each = var.foundry_endpoint != "" ? toset(["enabled"]) : toset([])
         content {
           name  = "FOUNDRY_ENDPOINT"
           value = var.foundry_endpoint
@@ -114,7 +114,7 @@ resource "azurerm_container_app" "api" {
       }
 
       dynamic "env" {
-        for_each = var.foundry_model != "" ? [1] : []
+        for_each = var.foundry_model != "" ? toset(["enabled"]) : toset([])
         content {
           name  = "FOUNDRY_MODEL"
           value = var.foundry_model
@@ -122,7 +122,7 @@ resource "azurerm_container_app" "api" {
       }
 
       dynamic "env" {
-        for_each = var.foundry_api_key != "" ? [1] : []
+        for_each = var.foundry_api_key != "" ? toset(["enabled"]) : toset([])
         content {
           name        = "FOUNDRY_API_KEY"
           secret_name = "foundry-api-key"
@@ -130,7 +130,7 @@ resource "azurerm_container_app" "api" {
       }
 
       dynamic "env" {
-        for_each = var.swa_hostname != "" ? [1] : []
+        for_each = var.swa_hostname != "" ? toset(["enabled"]) : toset([])
         content {
           name  = "ALLOWED_ORIGINS"
           value = "https://${var.swa_hostname}"
