@@ -38,6 +38,7 @@ env:
 permissions:
   contents: read
   id-token: write
+  secrets: write
 
 jobs:
   terraform:
@@ -117,6 +118,18 @@ jobs:
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         working-directory: infra/terraform
         run: terraform apply -auto-approve ${{ env.ENVIRONMENT }}.tfplan
+
+      - name: Save Static Web App Deployment Token to GitHub Secret
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        working-directory: infra/terraform
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Extracting Static Web App deployment token..."
+          SWA_TOKEN=$(terraform output -raw static_web_app_api_key)
+          echo "Saving token to GitHub secret AZURE_STATIC_WEB_APPS_API_TOKEN..."
+          echo "$SWA_TOKEN" | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN
+          echo "✅ Secret saved successfully"
 
       - name: Export Terraform Outputs
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
