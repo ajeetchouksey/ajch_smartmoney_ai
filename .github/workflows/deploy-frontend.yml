@@ -14,9 +14,6 @@ on:
         required: false
         default: 'dev'
 
-env:
-  DEPLOYMENT_ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-
 jobs:
   deploy:
     name: Deploy Static Web App
