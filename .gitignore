@@ -9,6 +9,7 @@ env/
 
 # AI Settings — contains API keys, never commit
 src/js/ai/ai_settings.js
+src/js/ai/api_config.js
 
 # Azure
 local.settings.json

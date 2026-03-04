@@ -62,6 +62,14 @@ resource "azurerm_container_app" "api" {
     value = var.cosmos_primary_key
   }
 
+  dynamic "secret" {
+    for_each = var.foundry_api_key != "" ? [1] : []
+    content {
+      name  = "foundry-api-key"
+      value = var.foundry_api_key
+    }
+  }
+
   ingress {
     external_enabled = true
     target_port      = var.api_target_port
@@ -95,6 +103,38 @@ resource "azurerm_container_app" "api" {
       env {
         name  = "APP_ENV"
         value = "production"
+      }
+
+      dynamic "env" {
+        for_each = var.foundry_endpoint != "" ? [1] : []
+        content {
+          name  = "FOUNDRY_ENDPOINT"
+          value = var.foundry_endpoint
+        }
+      }
+
+      dynamic "env" {
+        for_each = var.foundry_model != "" ? [1] : []
+        content {
+          name  = "FOUNDRY_MODEL"
+          value = var.foundry_model
+        }
+      }
+
+      dynamic "env" {
+        for_each = var.foundry_api_key != "" ? [1] : []
+        content {
+          name        = "FOUNDRY_API_KEY"
+          secret_name = "foundry-api-key"
+        }
+      }
+
+      dynamic "env" {
+        for_each = var.swa_hostname != "" ? [1] : []
+        content {
+          name  = "ALLOWED_ORIGINS"
+          value = "https://${var.swa_hostname}"
+        }
       }
     }
 

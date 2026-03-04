@@ -102,6 +102,11 @@ module "containers" {
 
   cosmos_endpoint    = module.cosmosdb.endpoint
   cosmos_primary_key = module.cosmosdb.primary_key
+
+  foundry_endpoint = var.foundry_endpoint
+  foundry_model    = var.foundry_model
+  foundry_api_key  = var.foundry_api_key
+  swa_hostname     = module.static_web_app.default_hostname
 }
 
 # NOTE: Role assignments commented out due to permission constraints

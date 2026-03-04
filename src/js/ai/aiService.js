@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 let _settings = null;
+let _apiBaseUrl = null;
 
 async function loadSettings() {
     if (_settings !== null) return _settings;
@@ -21,6 +22,18 @@ async function loadSettings() {
         _settings = { enabled: false };
     }
     return _settings;
+}
+
+async function loadApiBaseUrl() {
+    if (_apiBaseUrl !== null) return _apiBaseUrl;
+    try {
+        const mod = await import('./api_config.js');
+        _apiBaseUrl = mod.AI_API_BASE_URL || '';
+    } catch {
+        // api_config.js not present — fall back to relative /api path (SWA local)
+        _apiBaseUrl = '';
+    }
+    return _apiBaseUrl;
 }
 
 function buildForecastPrompt(expensesData) {
@@ -116,8 +129,10 @@ export const getForecast = async (expensesData) => {
         return parseForecastResponse(json.choices[0].message.content, expensesData);
     }
 
-    // ── Production / fallback: call Azure Functions backend ──────────────────
-    const res = await fetch('/api/ai-forecast', {
+    // ── Production: call FastAPI Container App backend ────────────────────────
+    const base = await loadApiBaseUrl();
+    const apiUrl = base ? `${base}/ai-forecast` : '/api/ai-forecast';
+    const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(expensesData)
