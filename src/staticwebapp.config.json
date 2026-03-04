@@ -1,0 +1,31 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "serve": "/index.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/css/*",
+      "serve": "/css/*"
+    },
+    {
+      "route": "/js/*",
+      "serve": "/js/*"
+    },
+    {
+      "route": "/data/*",
+      "serve": "/data/*"
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "*.{svg,png,jpg,gif,ico,css,js,json}",
+      "/data/*"
+    ]
+  },
+  "mimeTypes": {
+    ".json": "application/json"
+  }
+}
