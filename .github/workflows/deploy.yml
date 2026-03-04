@@ -38,7 +38,6 @@ env:
 permissions:
   contents: read
   id-token: write
-  secrets: write
 
 jobs:
   terraform:
@@ -119,17 +118,28 @@ jobs:
         working-directory: infra/terraform
         run: terraform apply -auto-approve ${{ env.ENVIRONMENT }}.tfplan
 
-      - name: Save Static Web App Deployment Token to GitHub Secret
+      - name: Export Static Web App Deployment Token
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        id: swa-token
         working-directory: infra/terraform
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Extracting Static Web App deployment token..."
           SWA_TOKEN=$(terraform output -raw static_web_app_api_key)
-          echo "Saving token to GitHub secret AZURE_STATIC_WEB_APPS_API_TOKEN..."
-          echo "$SWA_TOKEN" | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN
-          echo "✅ Secret saved successfully"
+          echo "::add-mask::$SWA_TOKEN"
+          echo "swa_token=$SWA_TOKEN" >> $GITHUB_OUTPUT
+          echo "✅ Static Web App token exported (masked)"
+
+      - name: Save token as GitHub secret via API
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          if [ -n "$GH_TOKEN" ]; then
+            echo "${{ steps.swa-token.outputs.swa_token }}" | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN
+            echo "✅ Secret AZURE_STATIC_WEB_APPS_API_TOKEN saved to repository"
+          else
+            echo "⚠️ PAT_TOKEN not configured. Run this command locally to set the secret:"
+            echo "gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body \"<token>\""
+          fi
 
       - name: Export Terraform Outputs
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
