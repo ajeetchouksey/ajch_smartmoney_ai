@@ -3,8 +3,8 @@
 
 project        = "smartmoney"
 environment    = "dev"
-location       = "eastus"
-location_short = "eus"
+location       = "eastus2"
+location_short = "eus2"
 
 # Networking — isolated /16 per environment to avoid CIDR conflicts
 vnet_address_space              = ["10.0.0.0/16"]
