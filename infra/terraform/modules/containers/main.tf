@@ -120,13 +120,14 @@ resource "azurerm_container_app" "api" {
         value = var.foundry_api_version
       }
 
-      dynamic "env" {
-        for_each = var.foundry_api_key != "" ? ["enabled"] : []
-        content {
-          name        = "FOUNDRY_API_KEY"
-          secret_name = "foundry-api-key"
-        }
-      }
+      # TODO: Fix dynamic block syntax for env - temporarily disabled
+      # dynamic "env" {
+      #   for_each = var.foundry_api_key != "" ? ["enabled"] : []
+      #   content {
+      #     name        = "FOUNDRY_API_KEY"
+      #     secret_name = "foundry-api-key"
+      #   }
+      # }
     }
 
     # Scale on concurrent HTTP requests
@@ -155,13 +156,14 @@ resource "azurerm_container_app" "worker" {
     value = var.cosmos_primary_key
   }
 
-  dynamic "secret" {
-    for_each = var.foundry_api_key != "" ? ["enabled"] : []
-    content {
-      name  = "foundry-api-key"
-      value = var.foundry_api_key
-    }
-  }
+  # TODO: Fix dynamic block syntax - temporarily disabled
+  # dynamic "secret" {
+  #   for_each = var.foundry_api_key != "" ? ["enabled"] : []
+  #   content {
+  #     name  = "foundry-api-key"
+  #     value = var.foundry_api_key
+  #   }
+  # }
 
   # No ingress — worker is internal only
   template {
@@ -209,13 +211,14 @@ resource "azurerm_container_app" "worker" {
         value = var.foundry_api_version
       }
 
-      dynamic "env" {
-        for_each = var.foundry_api_key != "" ? ["enabled"] : []
-        content {
-          name        = "FOUNDRY_API_KEY"
-          secret_name = "foundry-api-key"
-        }
-      }
+      # TODO: Fix dynamic block syntax for env - temporarily disabled
+      # dynamic "env" {
+      #   for_each = var.foundry_api_key != "" ? ["enabled"] : []
+      #   content {
+      #     name        = "FOUNDRY_API_KEY"
+      #     secret_name = "foundry-api-key"
+      #   }
+      # }
     }
   }
 }
