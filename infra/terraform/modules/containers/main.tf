@@ -62,12 +62,9 @@ resource "azurerm_container_app" "api" {
     value = var.cosmos_primary_key
   }
 
-  dynamic "secret" {
-    for_each = var.foundry_api_key != "" ? toset(["enabled"]) : toset([])
-    content {
-      name  = "foundry-api-key"
-      value = var.foundry_api_key
-    }
+  secret {
+    name  = "foundry-api-key"
+    value = var.foundry_api_key
   }
 
   ingress {
@@ -105,36 +102,24 @@ resource "azurerm_container_app" "api" {
         value = "production"
       }
 
-      dynamic "env" {
-        for_each = var.foundry_endpoint != "" ? toset(["enabled"]) : toset([])
-        content {
-          name  = "FOUNDRY_ENDPOINT"
-          value = var.foundry_endpoint
-        }
+      env {
+        name  = "FOUNDRY_ENDPOINT"
+        value = var.foundry_endpoint
       }
 
-      dynamic "env" {
-        for_each = var.foundry_model != "" ? toset(["enabled"]) : toset([])
-        content {
-          name  = "FOUNDRY_MODEL"
-          value = var.foundry_model
-        }
+      env {
+        name  = "FOUNDRY_MODEL"
+        value = var.foundry_model
       }
 
-      dynamic "env" {
-        for_each = var.foundry_api_key != "" ? toset(["enabled"]) : toset([])
-        content {
-          name        = "FOUNDRY_API_KEY"
-          secret_name = "foundry-api-key"
-        }
+      env {
+        name        = "FOUNDRY_API_KEY"
+        secret_name = "foundry-api-key"
       }
 
-      dynamic "env" {
-        for_each = var.swa_hostname != "" ? toset(["enabled"]) : toset([])
-        content {
-          name  = "ALLOWED_ORIGINS"
-          value = "https://${var.swa_hostname}"
-        }
+      env {
+        name  = "ALLOWED_ORIGINS"
+        value = var.swa_hostname != "" ? "https://${var.swa_hostname}" : "*"
       }
     }
 

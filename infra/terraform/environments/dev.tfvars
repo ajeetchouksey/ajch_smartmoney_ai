@@ -8,7 +8,7 @@ location_short = "eus2"
 
 # Networking — isolated /16 per environment to avoid CIDR conflicts
 vnet_address_space              = ["10.0.0.0/16"]
-container_apps_subnet_prefix    = "10.0.0.0/21"   # /21 minimum for Container Apps
+container_apps_subnet_prefix    = "10.0.0.0/21" # /21 minimum for Container Apps
 private_endpoints_subnet_prefix = "10.0.8.0/24"
 
 # Cosmos DB — serverless + free tier keeps dev cost at near zero

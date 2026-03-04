@@ -15,7 +15,7 @@ resource "azurerm_cosmosdb_account" "main" {
   kind                = "GlobalDocumentDB"
   tags                = var.tags
 
-  free_tier_enabled = var.enable_free_tier
+  free_tier_enabled   = var.enable_free_tier
   minimal_tls_version = "Tls12"
 
   consistency_policy {
@@ -59,10 +59,10 @@ resource "azurerm_cosmosdb_sql_database" "main" {
 
 locals {
   containers = {
-    users        = "/id"      # one document per user
-    transactions = "/userId"  # all transactions for a user share a partition
-    portfolio    = "/userId"  # portfolio summary per user
-    insights     = "/userId"  # AI insights per user
+    users        = "/id"     # one document per user
+    transactions = "/userId" # all transactions for a user share a partition
+    portfolio    = "/userId" # portfolio summary per user
+    insights     = "/userId" # AI insights per user
   }
 }
 

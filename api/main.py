@@ -31,10 +31,12 @@ app.add_middleware(
 )
 
 # ── AI Foundry config ─────────────────────────────────────────────────────────
-FOUNDRY_ENDPOINT    = os.environ["FOUNDRY_ENDPOINT"].rstrip("/")
-FOUNDRY_MODEL       = os.environ["FOUNDRY_MODEL"]
-FOUNDRY_API_KEY     = os.environ["FOUNDRY_API_KEY"]
+FOUNDRY_ENDPOINT    = os.getenv("FOUNDRY_ENDPOINT", "").rstrip("/")
+FOUNDRY_MODEL       = os.getenv("FOUNDRY_MODEL", "")
+FOUNDRY_API_KEY     = os.getenv("FOUNDRY_API_KEY", "")
 FOUNDRY_API_VERSION = os.getenv("FOUNDRY_API_VERSION", "2024-08-01-preview")
+
+AI_ENABLED = bool(FOUNDRY_ENDPOINT and FOUNDRY_MODEL and FOUNDRY_API_KEY)
 
 
 def _build_prompt(data: dict) -> str:
@@ -108,6 +110,9 @@ Respond with exactly this JSON shape:
 
 @app.post("/ai-forecast")
 async def ai_forecast(request: Request):
+    if not AI_ENABLED:
+        raise HTTPException(status_code=503, detail="AI not configured on this server")
+
     try:
         body = await request.json()
     except Exception:
