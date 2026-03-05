@@ -10,6 +10,162 @@ import { getForecast, isAIEnabled } from './ai/aiService.js';
 import { inferProfileType, suggestCurrencyForCountry, generateWelcomeInsight } from './ai/aiOnboarding.js';
 import { quickParseEntry, parseNaturalLanguageCommand } from './ai/aiCopilot.js';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Currency Helper — Get primary currency for a country
+// ─────────────────────────────────────────────────────────────────────────────
+function getPrimaryCurrency(countryCode) {
+    if (!countryCode || !state.countriesRef) return null;
+    const country = state.countriesRef.find(c => c.code === countryCode);
+    return country?.currencies?.[0] || null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Searchable Combobox Controller (vanilla JS)
+// ─────────────────────────────────────────────────────────────────────────────
+let _comboboxGlobalOutsideClickInit = false;
+
+function initCombobox(id) {
+    const wrapper = document.querySelector(`[data-combobox-id="${id}"]`);
+    const input = document.getElementById(id);
+    const listbox = document.getElementById(`${id}-listbox`);
+    const fallback = document.getElementById(`${id}-fallback`);
+    const options = listbox ? Array.from(listbox.querySelectorAll('.combobox-option')) : [];
+    let filteredOptions = [...options];
+    let selectedIndex = -1;
+
+    if (!input || !listbox) return;
+
+    const showOptions = () => {
+        listbox.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+    };
+
+    const hideOptions = () => {
+        listbox.classList.add('hidden');
+        input.setAttribute('aria-expanded', 'false');
+        selectedIndex = -1;
+    };
+
+    const filterOptions = (searchTerm) => {
+        const term = searchTerm.toLowerCase().trim();
+        filteredOptions = options.filter(opt => {
+            const text = opt.textContent.toLowerCase();
+            return term === '' || text.includes(term);
+        });
+
+        listbox.innerHTML = '';
+        filteredOptions.forEach((opt, idx) => {
+            const div = document.createElement('div');
+            div.className = 'combobox-option p-3 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0 text-[14px] text-gray-800';
+            div.setAttribute('role', 'option');
+            div.setAttribute('data-value', opt.dataset.value);
+            div.innerHTML = opt.innerHTML;
+            div.addEventListener('click', () => selectOption(div, opt.dataset.value));
+            div.addEventListener('mouseenter', () => {
+                document.querySelectorAll(`#${id}-listbox .combobox-option`).forEach(o => o.classList.remove('bg-blue-50'));
+                div.classList.add('bg-blue-50');
+                selectedIndex = filteredOptions.indexOf(opt);
+            });
+            listbox.appendChild(div);
+        });
+
+        showOptions();
+        if (filteredOptions.length === 0) {
+            const noResult = document.createElement('div');
+            noResult.className = 'p-3 text-gray-500 text-[14px] text-center';
+            noResult.textContent = 'No results found';
+            listbox.appendChild(noResult);
+        }
+    };
+
+    const selectOption = (optionEl, value) => {
+        const label = optionEl.textContent.trim();
+        input.value = label;
+        fallback.value = value;
+        hideOptions();
+        fallback.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    // Input events
+    input.addEventListener('input', (e) => {
+        filterOptions(e.target.value);
+        // Clear stale backing value when user edits text away from a selected option.
+        if (fallback && fallback.value) {
+            const text = e.target.value.trim().toLowerCase();
+            const matched = options.find(opt => opt.textContent.trim().toLowerCase() === text);
+            if (!matched || matched.dataset.value !== fallback.value) {
+                fallback.value = '';
+                fallback.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    });
+    input.addEventListener('focus', () => {
+        filterOptions(input.value);
+    });
+
+    // Keyboard navigation
+    input.addEventListener('keydown', (e) => {
+        if (!listbox || listbox.classList.contains('hidden') && e.key !== 'ArrowDown') return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                showOptions();
+                selectedIndex = Math.min(selectedIndex + 1, filteredOptions.length - 1);
+                updateSelection();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                if (selectedIndex === -1) hideOptions();
+                else updateSelection();
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedIndex >= 0 && filteredOptions[selectedIndex]) {
+                    const opt = filteredOptions[selectedIndex];
+                    selectOption(opt, opt.value || opt.dataset.value);
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                hideOptions();
+                break;
+        }
+    });
+
+    const updateSelection = () => {
+        const items = listbox.querySelectorAll('.combobox-option');
+        items.forEach((item, idx) => {
+            item.classList.toggle('bg-blue-50', idx === selectedIndex);
+        });
+    };
+
+    // Close on outside click (register once globally)
+    if (!_comboboxGlobalOutsideClickInit) {
+        document.addEventListener('click', (e) => {
+            document.querySelectorAll('.combobox-wrapper').forEach(box => {
+                if (!box.contains(e.target)) {
+                    const inputEl = box.querySelector('.combobox-input');
+                    const listboxEl = box.querySelector('.combobox-listbox');
+                    if (listboxEl) listboxEl.classList.add('hidden');
+                    if (inputEl) inputEl.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+        _comboboxGlobalOutsideClickInit = true;
+    }
+}
+
+function initAllComboboxes() {
+    document.querySelectorAll('.combobox-input').forEach(input => {
+        if (!input.dataset._comboboxInitialized) {
+            initCombobox(input.id);
+            input.dataset._comboboxInitialized = 'true';
+        }
+    });
+}
+
 // Application State
 const state = {
     activePage: 'dashboard',
@@ -469,6 +625,10 @@ function showExpenseModal(type, monthData, records, currency, availableCurrencie
     const close = () => document.getElementById('exp-modal')?.remove();
     document.getElementById('close-exp-modal')?.addEventListener('click', close);
     document.getElementById('cancel-exp')?.addEventListener('click', close);
+    initAllComboboxes();
+    if (document.getElementById('exp-currency-fallback')) {
+        setSelectBackedValue('exp-currency', displayCur || 'USD');
+    }
 
     // ── Smart Fill handler ────────────────────────────────────────────────────
     document.getElementById('exp-smart-btn')?.addEventListener('click', async () => {
@@ -485,7 +645,7 @@ function showExpenseModal(type, monthData, records, currency, availableCurrencie
         if (parsed) {
             if (parsed.name)     document.getElementById('exp-name').value = parsed.name;
             if (parsed.category) document.getElementById('exp-category').value = parsed.category;
-            if (parsed.currency) document.getElementById('exp-currency').value = parsed.currency;
+            if (parsed.currency) setSelectBackedValue('exp-currency', parsed.currency);
             if (parsed.frequency) document.getElementById('exp-frequency').value = parsed.frequency;
             if (type === 'fixed') {
                 if (parsed.amount != null) document.getElementById('exp-amount').value = parsed.amount;
@@ -512,7 +672,7 @@ function showExpenseModal(type, monthData, records, currency, availableCurrencie
         const name = document.getElementById('exp-name')?.value.trim();
         if (!name) { alert('Please enter a name.'); return; }
         const cat  = document.getElementById('exp-category')?.value;
-        const cur  = document.getElementById('exp-currency')?.value || displayCur;
+        const cur  = getSelectBackedValue('exp-currency') || displayCur;
         const freq = document.getElementById('exp-frequency')?.value || 'monthly';
         if (type === 'fixed') {
             const amount = parseFloat(document.getElementById('exp-amount')?.value) || 0;
@@ -537,6 +697,27 @@ function showIncomeModal(monthData, records, availableCurrencies, homeCountry, r
     const close = () => document.getElementById('income-modal')?.remove();
     document.getElementById('close-income-modal')?.addEventListener('click', close);
     document.getElementById('cancel-income')?.addEventListener('click', close);
+    initAllComboboxes();
+    if (document.getElementById('inc-currency-fallback')) {
+        setSelectBackedValue('inc-currency', displayCur || 'USD');
+    }
+    if (document.getElementById('inc-country-type-fallback')) {
+        setSelectBackedValue('inc-country-type', 'home');
+    }
+
+    // Auto-update currency when country-type changes
+    document.getElementById('inc-country-type-fallback')?.addEventListener('change', () => {
+        const countryType = getSelectBackedValue('inc-country-type');
+        let targetCurrency = null;
+        if (countryType === 'home') {
+            targetCurrency = getPrimaryCurrency(homeCountry);
+        } else if (countryType === 'residence' && residenceCountry) {
+            targetCurrency = getPrimaryCurrency(residenceCountry);
+        }
+        if (targetCurrency && availableCurrencies.find(c => c.code === targetCurrency)) {
+            setSelectBackedValue('inc-currency', targetCurrency);
+        }
+    });
 
     // ── Smart Fill handler ────────────────────────────────────────────────────
     document.getElementById('inc-smart-btn')?.addEventListener('click', async () => {
@@ -553,10 +734,10 @@ function showIncomeModal(monthData, records, availableCurrencies, homeCountry, r
         if (parsed) {
             if (parsed.name)         document.getElementById('inc-name').value = parsed.name;
             if (parsed.category)     document.getElementById('inc-category').value = parsed.category;
-            if (parsed.currency)     document.getElementById('inc-currency').value = parsed.currency;
+            if (parsed.currency)     setSelectBackedValue('inc-currency', parsed.currency);
             if (parsed.amount != null) document.getElementById('inc-amount').value = parsed.amount;
             if (parsed.frequency)    document.getElementById('inc-frequency').value = parsed.frequency;
-            if (parsed.country_type) document.getElementById('inc-country-type').value = parsed.country_type;
+            if (parsed.country_type) setSelectBackedValue('inc-country-type', parsed.country_type);
             if (statusEl) {
                 statusEl.textContent = '✓ Fields filled — review and adjust if needed.';
                 statusEl.classList.remove('hidden', 'text-rose-600');
@@ -575,9 +756,9 @@ function showIncomeModal(monthData, records, availableCurrencies, homeCountry, r
         const name = document.getElementById('inc-name')?.value.trim();
         if (!name) { alert('Please enter a name.'); return; }
         const cat          = document.getElementById('inc-category')?.value;
-        const cur          = document.getElementById('inc-currency')?.value || displayCur;
+        const cur          = getSelectBackedValue('inc-currency') || displayCur;
         const amount       = parseFloat(document.getElementById('inc-amount')?.value) || 0;
-        const country_type = document.getElementById('inc-country-type')?.value || 'home';
+        const country_type = getSelectBackedValue('inc-country-type') || 'home';
         const freq         = document.getElementById('inc-frequency')?.value || 'monthly';
         if (!monthData.income_sources) monthData.income_sources = [];
         monthData.income_sources.push({ id: `inc_${Date.now()}`, name, amount, currency: cur, category: cat, country_type, frequency: freq });
@@ -954,19 +1135,25 @@ function goToWizardStep(step) {
 
     else if (step === 2) {
         body.innerHTML = renderWizardStep2(state.countriesRef || []);
-        const homeSelect = document.getElementById('home-country');
+        const homeSelect = document.getElementById('home-country-fallback') || document.getElementById('home-country');
+        const residenceSelect = document.getElementById('residence-country-fallback') || document.getElementById('residence-country');
         const sameChk    = document.getElementById('same-country');
         const resRow     = document.getElementById('residence-row');
         const nextBtn    = document.getElementById('wizard-next-2');
 
         function checkStep2Valid() {
-            const homeOk = !!homeSelect.value;
-            const resOk  = sameChk.checked || !!document.getElementById('residence-country')?.value;
+            const homeOk = !!getSelectBackedValue('home-country');
+            const resOk  = sameChk.checked || !!getSelectBackedValue('residence-country');
             nextBtn.disabled = !(homeOk && resOk);
         }
 
         homeSelect.addEventListener('change', () => {
-            state.wizard.home_country = homeSelect.value;
+            state.wizard.home_country = getSelectBackedValue('home-country');
+            // Auto-set currency based on selected country
+            const primaryCurrency = getPrimaryCurrency(state.wizard.home_country);
+            if (primaryCurrency) {
+                state.wizard.auto_currency = primaryCurrency;
+            }
             checkStep2Valid();
         });
         sameChk.addEventListener('change', () => {
@@ -974,17 +1161,17 @@ function goToWizardStep(step) {
             resRow.classList.toggle('hidden', sameChk.checked);
             checkStep2Valid();
         });
-        resRow.addEventListener('change', (e) => {
-            state.wizard.residence_country = e.target.value;
+        residenceSelect?.addEventListener('change', () => {
+            state.wizard.residence_country = getSelectBackedValue('residence-country');
             checkStep2Valid();
         });
 
         document.getElementById('wizard-back-2').addEventListener('click', () => goToWizardStep(1));
         nextBtn.addEventListener('click', () => {
-            state.wizard.home_country = homeSelect.value;
+            state.wizard.home_country = getSelectBackedValue('home-country');
             state.wizard.same_country = sameChk.checked;
             if (!sameChk.checked) {
-                state.wizard.residence_country = document.getElementById('residence-country')?.value;
+                state.wizard.residence_country = getSelectBackedValue('residence-country');
             }
 
             // Fire AI currency suggestion in the background while user transitions
@@ -1007,6 +1194,9 @@ function goToWizardStep(step) {
 
             goToWizardStep(3);
         });
+
+        // Initialize searchable comboboxes (country fields)
+        initAllComboboxes();
     }
 
     else if (step === 3) {
@@ -1026,17 +1216,33 @@ function goToWizardStep(step) {
 
         // Render step immediately (with loading pill while AI resolves)
         body.innerHTML = renderWizardStep3(available, null);
-        const primarySel = document.getElementById('primary-currency');
+        const primarySel = document.getElementById('primary-currency-fallback') || document.getElementById('primary-currency');
         const nextBtn    = document.getElementById('wizard-next-3');
+        let userPickedPrimaryCurrency = false;
+        let suppressPrimaryChangeEvent = false;
+
+        const setPrimaryCurrency = (code) => {
+            suppressPrimaryChangeEvent = true;
+            setSelectBackedValue('primary-currency', code);
+            suppressPrimaryChangeEvent = false;
+        };
+
+        // Auto-populate currency if determined from country selection
+        if (state.wizard.auto_currency && available.find(c => c.code === state.wizard.auto_currency)) {
+            setPrimaryCurrency(state.wizard.auto_currency);
+            state.wizard.primary_currency = state.wizard.auto_currency;
+            nextBtn.disabled = false;
+        }
 
         primarySel.addEventListener('change', () => {
-            state.wizard.primary_currency = primarySel.value;
-            nextBtn.disabled = !primarySel.value;
+            if (!suppressPrimaryChangeEvent) userPickedPrimaryCurrency = true;
+            state.wizard.primary_currency = getSelectBackedValue('primary-currency');
+            nextBtn.disabled = !state.wizard.primary_currency;
         });
 
         document.getElementById('wizard-back-3').addEventListener('click', () => goToWizardStep(2));
         nextBtn.addEventListener('click', () => {
-            state.wizard.primary_currency = primarySel.value;
+            state.wizard.primary_currency = getSelectBackedValue('primary-currency');
             state.wizard.additional_currencies = [...document.querySelectorAll('#extra-currencies input:checked')]
                 .map(el => el.value)
                 .filter(v => v !== state.wizard.primary_currency);
@@ -1059,8 +1265,8 @@ function goToWizardStep(step) {
                             </div>
                         </div>`;
                     // Pre-select the suggested currency
-                    if (primarySel) {
-                        primarySel.value = suggestion.code;
+                    if (primarySel && !userPickedPrimaryCurrency && !getSelectBackedValue('primary-currency')) {
+                        setPrimaryCurrency(suggestion.code);
                         state.wizard.primary_currency = suggestion.code;
                         nextBtn.disabled = false;
                     }
@@ -1074,6 +1280,9 @@ function goToWizardStep(step) {
         } else {
             document.getElementById('ai-currency-loading')?.remove();
         }
+
+        // Initialize searchable comboboxes (currency field)
+        initAllComboboxes();
     }
 
     else if (step === 4) {
@@ -1190,4 +1399,24 @@ function goToWizardStep(step) {
             renderProfilePageView();
         });
     }
+}
+
+function getSelectBackedValue(id) {
+    const fallback = document.getElementById(`${id}-fallback`);
+    if (fallback) return fallback.value || '';
+    return document.getElementById(id)?.value || '';
+}
+
+function setSelectBackedValue(id, value) {
+    const fallback = document.getElementById(`${id}-fallback`);
+    const input = document.getElementById(id);
+    if (fallback && input) {
+        fallback.value = value;
+        const selected = fallback.options[fallback.selectedIndex];
+        input.value = selected ? selected.text : '';
+        fallback.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+    }
+    const el = document.getElementById(id);
+    if (el) el.value = value;
 }

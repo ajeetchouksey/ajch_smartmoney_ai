@@ -110,7 +110,7 @@ export const renderCopilotInterface = () => `
             <p class="text-center text-[11px] text-gray-400 mt-2"><i class="fas fa-shield-halved mr-1 opacity-70"></i>Copilot can make mistakes. Verify important financial entries.</p>
         </div>
     </div>
-`;
+    `;
 
 /** Renders a single chat bubble. role: 'user'|'copilot'|'system' */
 export const renderCopilotMessage = (role, text) => {
@@ -245,7 +245,14 @@ export const renderWizardStep1 = () => `
     </div>
 `;
 
-export const renderWizardStep2 = (countries) => `
+export const renderWizardStep2 = (countries) => {
+    const countryOptions = countries.map(c => ({
+        value: c.code,
+        label: c.name,
+        flag: c.flag
+    }));
+
+    return `
     <div class="space-y-6">
         <div>
             <p class="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-1">Step 2 of 5</p>
@@ -255,13 +262,7 @@ export const renderWizardStep2 = (countries) => `
         <div class="space-y-4">
             <div>
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Home Country (nationality)</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fas fa-flag"></i></span>
-                    <select id="home-country" class="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-300 text-[14px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white appearance-none">
-                        <option value="">Select country…</option>
-                        ${countries.map(c => `<option value="${c.code}">${c.flag} ${c.name}</option>`).join('')}
-                    </select>
-                </div>
+                ${renderSearchableCombobox('home-country', countryOptions, 'fas fa-flag', 'Select country…')}
             </div>
             <div class="flex items-center space-x-3 py-1">
                 <input type="checkbox" id="same-country" class="h-4 w-4 rounded accent-blue-600" checked>
@@ -269,13 +270,7 @@ export const renderWizardStep2 = (countries) => `
             </div>
             <div id="residence-row" class="hidden">
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Country of Residence</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fas fa-location-dot"></i></span>
-                    <select id="residence-country" class="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-300 text-[14px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white appearance-none">
-                        <option value="">Select country…</option>
-                        ${countries.map(c => `<option value="${c.code}">${c.flag} ${c.name}</option>`).join('')}
-                    </select>
-                </div>
+                ${renderSearchableCombobox('residence-country', countryOptions, 'fas fa-location-dot', 'Select country…')}
             </div>
         </div>
         <div class="flex space-x-3">
@@ -283,9 +278,17 @@ export const renderWizardStep2 = (countries) => `
             <button id="wizard-next-2" disabled class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all text-[14px]">Continue</button>
         </div>
     </div>
-`;
+    `;
+};
 
-export const renderWizardStep3 = (availableCurrencies, aiSuggestion = null) => `
+export const renderWizardStep3 = (availableCurrencies, aiSuggestion = null) => {
+    const currencyOptions = availableCurrencies.map(c => ({
+        value: c.code,
+        label: `${c.code} — ${c.name}`,
+        flag: c.symbol
+    }));
+
+    return `
     <div class="space-y-6">
         <div>
             <p class="text-[11px] font-semibold uppercase tracking-widest text-blue-600 mb-1">Step 3 of 5</p>
@@ -307,13 +310,7 @@ export const renderWizardStep3 = (availableCurrencies, aiSuggestion = null) => `
         <div class="space-y-4">
             <div>
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Primary Currency</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">$</span>
-                    <select id="primary-currency" class="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-300 text-[14px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white appearance-none">
-                        <option value="">Select currency…</option>
-                        ${availableCurrencies.map(c => `<option value="${c.code}">${c.symbol} ${c.code} — ${c.name}</option>`).join('')}
-                    </select>
-                </div>
+                ${renderSearchableCombobox('primary-currency', currencyOptions, 'fas fa-dollar-sign', 'Select currency…')}
             </div>
             <div>
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Additional Currencies <span class="font-normal text-gray-400">(optional)</span></label>
@@ -333,6 +330,7 @@ export const renderWizardStep3 = (availableCurrencies, aiSuggestion = null) => `
         </div>
     </div>
 `;
+};
 
 export const renderWizardStep4 = (profileType) => `
     <div class="space-y-6">
@@ -974,9 +972,12 @@ export const renderExpenseEntryModal = (type, availableCurrencies, displayCur) =
             ${curs ? `
             <div>
                 <label class="text-[12px] font-semibold text-gray-600 block mb-1">Currency</label>
-                <select id="exp-currency" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    ${curs.map(c => `<option value="${c.code}" ${c.code === displayCur ? 'selected' : ''}>${c.code} — ${c.name}</option>`).join('')}
-                </select>
+                ${renderSearchableCombobox(
+                    'exp-currency',
+                    curs.map(c => ({ value: c.code, label: `${c.code} — ${c.name}` })),
+                    'fas fa-coins',
+                    'Select currency…'
+                )}
             </div>
             ` : `<input type="hidden" id="exp-currency" value="${displayCur || 'USD'}">`}
             ${type === 'fixed' ? `
@@ -1061,9 +1062,12 @@ export const renderIncomeEntryModal = (availableCurrencies, homeCountry, residen
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="text-[12px] font-semibold text-gray-600 block mb-1">Currency</label>
-                    <select id="inc-currency" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                        ${curs.map(c => `<option value="${c.code}" ${c.code === displayCur ? 'selected' : ''}>${c.code}</option>`).join('')}
-                    </select>
+                    ${renderSearchableCombobox(
+                        'inc-currency',
+                        curs.map(c => ({ value: c.code, label: `${c.code} — ${c.name || c.code}` })),
+                        'fas fa-coins',
+                        'Select currency…'
+                    )}
                 </div>
                 <div>
                     <label class="text-[12px] font-semibold text-gray-600 block mb-1">Amount</label>
@@ -1072,11 +1076,16 @@ export const renderIncomeEntryModal = (availableCurrencies, homeCountry, residen
             </div>
             <div>
                 <label class="text-[12px] font-semibold text-gray-600 block mb-1">Country Association</label>
-                <select id="inc-country-type" class="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    <option value="home">${homeLabel}</option>
-                    ${showRes ? `<option value="residence">${resLabel}</option>` : ''}
-                    <option value="other">Other / International</option>
-                </select>
+                ${renderSearchableCombobox(
+                    'inc-country-type',
+                    [
+                        { value: 'home', label: homeLabel },
+                        ...(showRes ? [{ value: 'residence', label: resLabel }] : []),
+                        { value: 'other', label: 'Other / International' }
+                    ],
+                    'fas fa-location-dot',
+                    'Select association…'
+                )}
             </div>
             <div class="flex space-x-3 pt-2">
                 <button id="cancel-income" class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all text-[13px]">Cancel</button>
@@ -1191,6 +1200,54 @@ export const renderAllocationChart = (holdings) => {
                     `;
                 }).join('')}
             </div>
+        </div>
+    `;
+};
+
+// ---------------------------------------------------------------------------
+// Searchable Combobox (Autocomplete Dropdown)
+// Vanilla JS implementation — no external library dependencies
+// ---------------------------------------------------------------------------
+
+export const renderSearchableCombobox = (id, options = [], iconClass = null, placeholder = "Search...") => {
+    const optionsHtml = options.map((opt, idx) => 
+        `<div class="combobox-option" data-value="${opt.value}" data-index="${idx}" role="option" tabindex="-1">
+            ${opt.flag ? `<span class="mr-2">${opt.flag}</span>` : ''}
+            <span class="combobox-option-text">${opt.label}</span>
+        </div>`
+    ).join('');
+
+    return `
+        <div class="combobox-wrapper relative" data-combobox-id="${id}">
+            <!-- Input with icon -->
+            <div class="relative">
+                ${iconClass ? `<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="${iconClass}"></i></span>` : ''}
+                <input
+                    id="${id}"
+                    type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded="false"
+                    aria-controls="${id}-listbox"
+                    placeholder="${placeholder}"
+                    class="w-full ${iconClass ? 'pl-9' : 'pl-4'} pr-4 py-3 rounded-xl border border-gray-300 text-[14px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white combobox-input"
+                >
+            </div>
+
+            <!-- Dropdown options -->
+            <div
+                id="${id}-listbox"
+                role="listbox"
+                class="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 rounded-xl shadow-lg z-50 hidden max-h-60 overflow-y-auto combobox-listbox"
+            >
+                ${optionsHtml}
+            </div>
+
+            <!-- Hidden select for form submission (accessibility fallback) -->
+            <select id="${id}-fallback" class="hidden" aria-hidden="true">
+                <option value="">Select...</option>
+                ${options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('')}
+            </select>
         </div>
     `;
 };
