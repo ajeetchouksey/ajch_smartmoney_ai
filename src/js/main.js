@@ -837,10 +837,10 @@ async function renderPortfolioPageView() {
         return;
     }
 
-    const holdings = portfolio?.data?.holdings || [];
-    const totalValue = portfolio?.data?.total_value || 0;
-    const dayChange = portfolio?.data?.day_change || 0;
-    const dayChangePct = portfolio?.data?.day_change_pct || 0;
+    const holdings = portfolio?.holdings || [];
+    const totalValue = portfolio?.total_value || 0;
+    const dayChange = portfolio?.day_change || 0;
+    const dayChangePct = portfolio?.day_change_pct || 0;
 
     // Build the page HTML
     const HTML = `
