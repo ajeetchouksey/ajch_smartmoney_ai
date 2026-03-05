@@ -262,7 +262,7 @@ export const renderWizardStep2 = (countries) => {
         <div class="space-y-4">
             <div>
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Home Country (nationality)</label>
-                ${renderSearchableCombobox('home-country', '', countryOptions, 'fas fa-flag', 'Select country…')}
+                ${renderSearchableCombobox('home-country', countryOptions, 'fas fa-flag', 'Select country…')}
             </div>
             <div class="flex items-center space-x-3 py-1">
                 <input type="checkbox" id="same-country" class="h-4 w-4 rounded accent-blue-600" checked>
@@ -270,7 +270,7 @@ export const renderWizardStep2 = (countries) => {
             </div>
             <div id="residence-row" class="hidden">
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Country of Residence</label>
-                ${renderSearchableCombobox('residence-country', '', countryOptions, 'fas fa-location-dot', 'Select country…')}
+                ${renderSearchableCombobox('residence-country', countryOptions, 'fas fa-location-dot', 'Select country…')}
             </div>
         </div>
         <div class="flex space-x-3">
@@ -310,7 +310,7 @@ export const renderWizardStep3 = (availableCurrencies, aiSuggestion = null) => {
         <div class="space-y-4">
             <div>
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Primary Currency</label>
-                ${renderSearchableCombobox('primary-currency', '', currencyOptions, 'fas fa-dollar-sign', 'Select currency…')}
+                ${renderSearchableCombobox('primary-currency', currencyOptions, 'fas fa-dollar-sign', 'Select currency…')}
             </div>
             <div>
                 <label class="text-[13px] font-semibold text-gray-700 block mb-1.5">Additional Currencies <span class="font-normal text-gray-400">(optional)</span></label>
@@ -974,7 +974,6 @@ export const renderExpenseEntryModal = (type, availableCurrencies, displayCur) =
                 <label class="text-[12px] font-semibold text-gray-600 block mb-1">Currency</label>
                 ${renderSearchableCombobox(
                     'exp-currency',
-                    '',
                     curs.map(c => ({ value: c.code, label: `${c.code} — ${c.name}` })),
                     'fas fa-coins',
                     'Select currency…'
@@ -1065,7 +1064,6 @@ export const renderIncomeEntryModal = (availableCurrencies, homeCountry, residen
                     <label class="text-[12px] font-semibold text-gray-600 block mb-1">Currency</label>
                     ${renderSearchableCombobox(
                         'inc-currency',
-                        '',
                         curs.map(c => ({ value: c.code, label: `${c.code} — ${c.name || c.code}` })),
                         'fas fa-coins',
                         'Select currency…'
@@ -1080,7 +1078,6 @@ export const renderIncomeEntryModal = (availableCurrencies, homeCountry, residen
                 <label class="text-[12px] font-semibold text-gray-600 block mb-1">Country Association</label>
                 ${renderSearchableCombobox(
                     'inc-country-type',
-                    '',
                     [
                         { value: 'home', label: homeLabel },
                         ...(showRes ? [{ value: 'residence', label: resLabel }] : []),
@@ -1212,7 +1209,7 @@ export const renderAllocationChart = (holdings) => {
 // Vanilla JS implementation — no external library dependencies
 // ---------------------------------------------------------------------------
 
-export const renderSearchableCombobox = (id, label, options = [], iconClass = null, placeholder = "Search...") => {
+export const renderSearchableCombobox = (id, options = [], iconClass = null, placeholder = "Search...") => {
     const optionsHtml = options.map((opt, idx) => 
         `<div class="combobox-option" data-value="${opt.value}" data-index="${idx}" role="option" tabindex="-1">
             ${opt.flag ? `<span class="mr-2">${opt.flag}</span>` : ''}
