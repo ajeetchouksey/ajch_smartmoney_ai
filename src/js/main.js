@@ -22,6 +22,8 @@ function getPrimaryCurrency(countryCode) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Searchable Combobox Controller (vanilla JS)
 // ─────────────────────────────────────────────────────────────────────────────
+let _comboboxGlobalOutsideClickInit = false;
+
 function initCombobox(id) {
     const wrapper = document.querySelector(`[data-combobox-id="${id}"]`);
     const input = document.getElementById(id);
@@ -85,7 +87,18 @@ function initCombobox(id) {
     };
 
     // Input events
-    input.addEventListener('input', (e) => filterOptions(e.target.value));
+    input.addEventListener('input', (e) => {
+        filterOptions(e.target.value);
+        // Clear stale backing value when user edits text away from a selected option.
+        if (fallback && fallback.value) {
+            const text = e.target.value.trim().toLowerCase();
+            const matched = options.find(opt => opt.textContent.trim().toLowerCase() === text);
+            if (!matched || matched.dataset.value !== fallback.value) {
+                fallback.value = '';
+                fallback.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    });
     input.addEventListener('focus', () => {
         filterOptions(input.value);
     });
@@ -128,10 +141,20 @@ function initCombobox(id) {
         });
     };
 
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (wrapper && !wrapper.contains(e.target)) hideOptions();
-    });
+    // Close on outside click (register once globally)
+    if (!_comboboxGlobalOutsideClickInit) {
+        document.addEventListener('click', (e) => {
+            document.querySelectorAll('.combobox-wrapper').forEach(box => {
+                if (!box.contains(e.target)) {
+                    const inputEl = box.querySelector('.combobox-input');
+                    const listboxEl = box.querySelector('.combobox-listbox');
+                    if (listboxEl) listboxEl.classList.add('hidden');
+                    if (inputEl) inputEl.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+        _comboboxGlobalOutsideClickInit = true;
+    }
 }
 
 function initAllComboboxes() {
@@ -1195,15 +1218,24 @@ function goToWizardStep(step) {
         body.innerHTML = renderWizardStep3(available, null);
         const primarySel = document.getElementById('primary-currency-fallback') || document.getElementById('primary-currency');
         const nextBtn    = document.getElementById('wizard-next-3');
+        let userPickedPrimaryCurrency = false;
+        let suppressPrimaryChangeEvent = false;
+
+        const setPrimaryCurrency = (code) => {
+            suppressPrimaryChangeEvent = true;
+            setSelectBackedValue('primary-currency', code);
+            suppressPrimaryChangeEvent = false;
+        };
 
         // Auto-populate currency if determined from country selection
         if (state.wizard.auto_currency && available.find(c => c.code === state.wizard.auto_currency)) {
-            setSelectBackedValue('primary-currency', state.wizard.auto_currency);
+            setPrimaryCurrency(state.wizard.auto_currency);
             state.wizard.primary_currency = state.wizard.auto_currency;
             nextBtn.disabled = false;
         }
 
         primarySel.addEventListener('change', () => {
+            if (!suppressPrimaryChangeEvent) userPickedPrimaryCurrency = true;
             state.wizard.primary_currency = getSelectBackedValue('primary-currency');
             nextBtn.disabled = !state.wizard.primary_currency;
         });
@@ -1233,8 +1265,8 @@ function goToWizardStep(step) {
                             </div>
                         </div>`;
                     // Pre-select the suggested currency
-                    if (primarySel) {
-                        setSelectBackedValue('primary-currency', suggestion.code);
+                    if (primarySel && !userPickedPrimaryCurrency && !getSelectBackedValue('primary-currency')) {
+                        setPrimaryCurrency(suggestion.code);
                         state.wizard.primary_currency = suggestion.code;
                         nextBtn.disabled = false;
                     }
