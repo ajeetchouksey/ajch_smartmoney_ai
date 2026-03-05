@@ -1086,3 +1086,111 @@ export const renderIncomeEntryModal = (availableCurrencies, homeCountry, residen
     </div>
     `;
 };
+
+// ---------------------------------------------------------------------------
+// Portfolio Page
+// ---------------------------------------------------------------------------
+
+export const renderHoldingCard = (holding) => {
+    const isPositive = holding.gain_loss_pct >= 0;
+    const badgeColor = isPositive 
+        ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+        : 'bg-rose-50 border-rose-100 text-rose-700';
+    const trendIcon = isPositive ? 'fa-arrow-up' : 'fa-arrow-down';
+    const gainLoss = holding.gain_loss_pct >= 0 
+        ? `+${holding.gain_loss_pct.toFixed(1)}%`
+        : `${holding.gain_loss_pct.toFixed(1)}%`;
+
+    return `
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-gray-300 transition-all">
+            <!-- Header -->
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-[15px] font-bold text-gray-900">${holding.ticker}</h3>
+                    <p class="text-[13px] text-gray-500 mt-0.5">${holding.name}</p>
+                </div>
+                <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full border ${badgeColor} text-[12px] font-semibold">
+                    <i class="fas ${trendIcon} text-[10px]"></i>
+                    <span>${gainLoss}</span>
+                </span>
+            </div>
+            
+            <!-- Body -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Shares</p>
+                    <p class="text-[15px] font-bold text-gray-900">${holding.shares.toLocaleString(undefined, {maximumFractionDigits: 4})}</p>
+                </div>
+                <div>
+                    <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Avg Cost</p>
+                    <p class="text-[15px] font-bold text-gray-900">$${holding.avg_cost.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Current Price</p>
+                    <p class="text-[15px] font-bold text-gray-900">$${holding.current_price.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Value</p>
+                    <p class="text-[15px] font-bold text-gray-900">$${holding.value.toLocaleString(undefined, {maximumFractionDigits: 2})}</p>
+                </div>
+            </div>
+            
+            <!-- Sector badge -->
+            <div class="flex items-center space-x-2 pt-3 border-t border-gray-100">
+                <i class="fas fa-tag text-[11px] text-gray-400"></i>
+                <span class="text-[12px] text-gray-600">${holding.sector}</span>
+            </div>
+        </div>
+    `;
+};
+
+export const renderAllocationChart = (holdings) => {
+    if (!holdings || holdings.length === 0) {
+        return `
+            <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                <p class="text-[13px] text-gray-500">No holdings to display.</p>
+            </div>
+        `;
+    }
+
+    // Group by sector
+    const bySector = {};
+    holdings.forEach(h => {
+        if (!bySector[h.sector]) bySector[h.sector] = 0;
+        bySector[h.sector] += h.value;
+    });
+
+    const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
+    const sectors = Object.entries(bySector).sort((a, b) => b[1] - a[1]);
+
+    const colors = ['bg-blue-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600', 'bg-purple-600', 'bg-cyan-600'];
+
+    return `
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <h3 class="text-[14px] font-bold text-gray-900 mb-5">Allocation by Sector</h3>
+            <div class="space-y-4">
+                ${sectors.map(([sector, value], idx) => {
+                    const pct = ((value / totalValue) * 100).toFixed(1);
+                    const color = colors[idx % colors.length];
+                    return `
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <div class="h-3 w-3 rounded-full ${color}"></div>
+                                    <p class="text-[13px] font-semibold text-gray-900">${sector}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[13px] font-bold text-gray-900">$${value.toLocaleString(undefined, {maximumFractionDigits: 2})}</p>
+                                    <p class="text-[11px] text-gray-500">${pct}%</p>
+                                </div>
+                            </div>
+                            <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div class="${color} h-full" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+};

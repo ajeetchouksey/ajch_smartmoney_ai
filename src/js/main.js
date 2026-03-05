@@ -2,7 +2,8 @@ import { renderNavbar, renderKpiCard, renderChartSkeleton, renderChatInterface,
          renderCopilotMessage, renderCopilotActionCard,
          renderProfileWizardShell, renderWizardStep1, renderWizardStep2, renderWizardStep3,
          renderWizardStep4, renderWizardStep5, renderProfilePage, renderAddMemberModal,
-         renderExpensesPage, renderExpenseEntryModal, renderIncomeEntryModal
+         renderExpensesPage, renderExpenseEntryModal, renderIncomeEntryModal,
+         renderHoldingCard, renderAllocationChart
        } from './uiux_kit/components.js';
 import { dataService, getProfileMerged, isLiveMode } from './data/dataService.js';
 import { getForecast, isAIEnabled } from './ai/aiService.js';
@@ -137,6 +138,10 @@ function renderPage(pageId) {
     }
     else if (pageId === 'profile') {
         renderProfilePageView();
+        return; // async fn handles content injection
+    }
+    else if (pageId === 'portfolio') {
+        renderPortfolioPageView();
         return; // async fn handles content injection
     }
     else if (pageId === 'settings') {
@@ -815,6 +820,58 @@ function showAddMemberModal(profile) {
         document.getElementById('add-member-modal')?.remove();
         renderProfilePageView();
     });
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio page renderer (Task #14, #15, #16)
+// ---------------------------------------------------------------------------
+async function renderPortfolioPageView() {
+    const contentArea = document.getElementById('app-content');
+    contentArea.innerHTML = '<div class="flex items-center justify-center py-20"><i class="fas fa-spinner fa-spin text-gray-400 text-2xl"></i></div>';
+
+    let portfolio;
+    try {
+        portfolio = await dataService.getPortfolio();
+    } catch (e) {
+        contentArea.innerHTML = `<p class="text-rose-500 p-8">Failed to load portfolio: ${e.message}</p>`;
+        return;
+    }
+
+    const holdings = portfolio?.holdings || [];
+    const totalValue = portfolio?.total_value || 0;
+    const dayChange = portfolio?.day_change || 0;
+    const dayChangePct = portfolio?.day_change_pct || 0;
+
+    // Build the page HTML
+    const HTML = `
+        <div class="space-y-6 max-w-6xl">
+            <!-- Header: Summary KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                ${renderKpiCard("Portfolio Value", `$${totalValue.toLocaleString(undefined, {maximumFractionDigits: 2})}`, dayChangePct >= 0 ? `+${dayChangePct.toFixed(2)}%` : `${dayChangePct.toFixed(2)}%`, "fas fa-briefcase", "bg-white")}
+                ${renderKpiCard("Holdings Count", holdings.length.toString(), "+0%", "fas fa-list", "bg-white")}
+                ${renderKpiCard("Day Change", `$${Math.abs(dayChange).toFixed(2)}`, dayChange >= 0 ? `+${dayChange.toFixed(2)}` : `${dayChange.toFixed(2)}`, "fas fa-chart-line", "bg-white")}
+            </div>
+
+            <!-- Two-column layout: Holdings + Allocation -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left: Holdings cards -->
+                <div class="lg:col-span-2">
+                    <h2 class="text-[18px] font-bold text-gray-900 mb-4">Holdings</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${holdings.map(h => renderHoldingCard(h)).join('')}
+                    </div>
+                </div>
+
+                <!-- Right: Allocation chart -->
+                <div>
+                    <h2 class="text-[18px] font-bold text-gray-900 mb-4">Allocation</h2>
+                    ${renderAllocationChart(holdings)}
+                </div>
+            </div>
+        </div>
+    `;
+
+    contentArea.innerHTML = HTML;
 }
 
 // ---------------------------------------------------------------------------
