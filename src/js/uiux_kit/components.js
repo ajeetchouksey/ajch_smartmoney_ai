@@ -1154,14 +1154,14 @@ export const renderAllocationChart = (holdings) => {
     }
 
     // Group by sector
-    const bySektor = {};
+    const bySector = {};
     holdings.forEach(h => {
-        if (!bySektor[h.sector]) bySektor[h.sector] = 0;
-        bySektor[h.sector] += h.value;
+        if (!bySector[h.sector]) bySector[h.sector] = 0;
+        bySector[h.sector] += h.value;
     });
 
     const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
-    const sectors = Object.entries(bySektor).sort((a, b) => b[1] - a[1]);
+    const sectors = Object.entries(bySector).sort((a, b) => b[1] - a[1]);
 
     const colors = ['bg-blue-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600', 'bg-purple-600', 'bg-cyan-600'];
 
